@@ -15,3 +15,11 @@ Other layers required to build the programmable load are:
 Configure your `build/conf/local.conf` to use one of the following machines:
 
 - stm32mp157a-dk1: STM32MP1 development board
+
+Additionally, you may wish to enable additional image features for debugging:
+
+```
+EXTRA_IMAGE_FEATURES = "debug-tweaks tools-debug ssh-server-dropbear"
+```
+
+Note that the flag to enable a read-only rootfs (`read-only-rootfs`) is not specified, as this causes some configuration (namely Dropbear) to get overridden such that the host key is _not_ stored on the overlay in /etc, and instead a ramdisk.

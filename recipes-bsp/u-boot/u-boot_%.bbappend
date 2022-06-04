@@ -8,6 +8,7 @@ SRCREV = "b6d46d951f1092f810e5d5971fb9a3dee8e87e86"
 LIC_FILES_CHKSUM = "file://Licenses/README;md5=2ca5f2c35c8cc335f0a19756634782f1"
 
 # extlinux config
+# TODO: can we make this not hard-code the version? symlink support w/ erofs is broken
 UBOOT_EXTLINUX_KERNEL_IMAGE = "/boot/zImage-5.15.44"
 UBOOT_EXTLINUX_KERNEL_IMAGE_default = "/boot/zImage-5.15.44"
 

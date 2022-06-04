@@ -19,6 +19,3 @@ do_install() {
 
 # export that we created the data fs mountpoints
 FILES:${PN} += "/persistent"
-
-# ensure the uboot config uses this as the new init
-UBOOT_EXTLINUX_KERNEL_ARGS += "init=/usr/sbin/init-overlays"

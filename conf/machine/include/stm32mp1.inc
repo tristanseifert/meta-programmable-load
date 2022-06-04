@@ -35,6 +35,9 @@ WKS_FILE_DEPENDS ?= " \
 # Wic default support
 WKS_FILE ?= "stm32mp1-sdcard.wks"
 
+# log files get persisted to data partition
+VOLATILE_LOG_DIR = "false"
+
 # Use systemd as init system
 VIRTUAL-RUNTIME_init_manager = "systemd"
 DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"

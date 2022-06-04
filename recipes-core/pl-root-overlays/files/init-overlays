@@ -2,22 +2,38 @@
 set -e
 
 # configuration: set during build time (for SD vs eMMC)
-# XXX: update
+# XXX: update from build script
+# NOTE: we cannot use the by-partlabel or friends, since udev isn't started yet
 
 # device to partition
 DEVICE=/dev/mmcblk0
-# partition for user data
-PARTITION=/dev/mmcblk0p5
+# root fs partition
+#ROOTPART=/dev/disk/by-partlabel/rootfs
+ROOTPART=/dev/mmcblk0p4
+# user fs partition (raw)
+#USERPART_RAW=/dev/disk/by-partlabel/userdata-raw
+USERPART_RAW=/dev/mmcblk0p5
+# user fs partition (formatted)
+#USERPART=/dev/disk/by-partlabel/userdata
+USERPART=/dev/mmcblk0p5
 # number of partitions, when completely partitioned
 NUM_DESIRED_PARTITIONS=5
 
 echo "Initializing rootfs overlays..."
 
+# mount overlays (assumes userdata is mounted already)
+# only overlays needed to get init to start up are mounted here
+mount_overlays()
+{
+	set -e
+	/bin/mount -t overlay -o lowerdir=/etc,upperdir=/persistent/overlay/etc,workdir=/persistent/overlay/.etc-work none /etc
+}
+
 # mount userdata partition
 mount_userdata()
 {
 	set -e
-	/bin/mount -o compress_algorithm=zstd:6,compress_chksum,whint_mode=fs-based,atgc,gc_merge,lazytime,noatime $PARTITION /persistent
+	/bin/mount -o compress_algorithm=zstd:6,compress_chksum,whint_mode=fs-based,atgc,gc_merge,lazytime,noatime $USERPART /persistent
 }
 
 # initialize the userdata partition
@@ -26,37 +42,37 @@ init_userdata_part()
 	set -e
 	# fix up the partition table
 	/usr/sbin/sgdisk -e $DEVICE --script 
-	/usr/sbin/partprobe
-
-	# delete old partition if needed (never needed)
-	# /usr/sbin/sgdisk -d 5 $DEVICE --script  
-	# /usr/sbin/partprobe
 
 	# create new and initialize fs
 	/usr/sbin/sgdisk -a 1024 -n 5:0:0 -u 5:R -t 5:0700 -c 5:userdata-raw $DEVICE --script
-	/usr/sbin/partprobe
 
-	# XXX: reboot here so that the partition tables get unfucked
-	# can we fix this with partprobe/an alternative tool?
+	# reboot here so that the partition tables get re-read properly
+	# TODO: can the reboot be avoided?
 	echo "The system will reboot..."
-	/sbin/reboot
+	/sbin/reboot -f
 }
 
 # initialize the filesystem on the userdata partition
+# any existing (remaining) filesystem is overwritten!
 init_userdata_format()
 {
 	# initialize fs
-	/usr/sbin/mkfs.f2fs -l userdata -O extra_attr,inode_checksum,sb_checksum,compression $PARTITION
+	/usr/sbin/mkfs.f2fs -f -l userdata -O extra_attr,inode_checksum,sb_checksum,compression $USERPART_RAW
 
 	# mount it and create the initial folder structure
 	mount_userdata
 
 	/bin/mkdir -p /persistent/overlay/etc
+	/bin/mkdir -p /persistent/overlay/.etc-work
 	/bin/mkdir -p /persistent/overlay/usr/etc
+	/bin/mkdir -p /persistent/overlay/.usr-etc-work
+	/bin/mkdir -p /persistent/overlay/home
+	/bin/mkdir -p /persistent/overlay/.home-work
 	/bin/mkdir -p /persistent/appdata
 	/bin/mkdir -p /persistent/config
 	/bin/mkdir -p /persistent/logs
-	/bin/mkdir -p /persistent/root
+	/bin/mkdir -p /persistent/logs/system
+	/bin/mkdir -p /persistent/overlay/.var-log-work
 
 	# when done, unmount to force to sync to disk
 	/bin/umount /persistent
@@ -66,33 +82,32 @@ init_userdata_format()
 	/usr/sbin/partprobe
 }
 
-
 # detect if we need to create the userdata partition
-# either we have no userdata partition, or just a placeholder (from a freshly burned image)
-
 # get number of lines in sgdisk output; 10 lines of header/garbage
 NUM_LINES=$(/usr/sbin/sgdisk -p $DEVICE --script | /usr/bin/wc -l)
 NUM_LINES=$(/usr/bin/expr $NUM_LINES - 10)
 
 if [ $NUM_LINES -lt $NUM_DESIRED_PARTITIONS ]; then
-	echo "Have $NUM_LINES partitions (expected $NUM_DESIRED_PARTITIONS), creating userdata partition"
+	# no partition, so create the slice
+	echo "Have $NUM_LINES partitions (expected $NUM_DESIRED_PARTITIONS), creating data partition"
 	init_userdata_part
 else
 	# check whether the partition was formatted
 	HAS_RAW_USERDATA=$(/usr/sbin/sgdisk -p $DEVICE --script | /bin/grep userdata-raw | /usr/bin/wc -l)
 	if [ $HAS_RAW_USERDATA -gt 0 ]; then
-		echo "Formatting userdata partition"
+		echo "Formatting data partition"
 		init_userdata_format
-	else
-		echo "Mounting existing userdata partition"
 	fi
 fi
 
-# the partition was created or exists now, mount it
+# mount data partition and create the /etc overlay
+# this happens before init is launched; the fstab is used for other overlays
+echo "Mounting data partition..."
 mount_userdata
 
-# create overlays onto rootfs
+echo "Mounting overlays..."
+mount_overlays
 
 # start init
 echo "All good - starting init"
-# /sbin/init
+exec /sbin/init
