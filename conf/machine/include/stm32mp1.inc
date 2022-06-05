@@ -91,20 +91,35 @@ IMAGE_INSTALL:append = " \
 "
 
 # UI libraries
-# qt6: for GUI
+# boot-splash: Custom bootup splash screen
 # libdrm: Accessing the DRM video drivers' API
 # fbset + fbset-modes: utility to change video modes (plus mode database)
 # TODO: define custom modes for LCD
+# cairo: generic graphics library
+# freetype: TTF rendering
+# harfbuzz: Text shaping engine
+# pango: Text rendering engine
+# qrencode: rendering of qr codes
 IMAGE_INSTALL:append = " \
+	boot-splash \
 	libdrm\
 	fbset fbset-modes \
+	cairo freetype harfbuzz pango \
+	qrencode \
 "
 
-
-# force add the SSH server
-EXTRA_IMAGE_FEATURES:append = " \
-	ssh-server-dropbear \
+# fonts for GUI
+# TODO: pare down which ones we'll actually use
+# gentium: serif-y
+# liberation: font family (sans, sans narrow, serif, mono)
+# inconsolata: monospaced font
+# dejavu: dejavu font family (sans, serif, mono)
+IMAGE_INSTALL:append = " \
+	ttf-gentium \
+	ttf-liberation-sans ttf-liberation-sans-narrow ttf-liberation-serif ttf-liberation-mono \
+	ttf-inconsolata \
 "
+# ttf-dejavu-sans ttf-dejavu-sans-condensed ttf-dejavu-serif ttf-dejavu-sans-mono
 
 # custom programmable load stuff
 IMAGE_INSTALL:append = " pl-root-overlays"
