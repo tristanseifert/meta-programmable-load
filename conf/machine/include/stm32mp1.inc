@@ -42,8 +42,8 @@ VOLATILE_LOG_DIR = "false"
 VIRTUAL-RUNTIME_init_manager = "systemd"
 DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
 VIRTUAL-RUNTIME_initscripts = ""
-DISTRO_FEATURES:append = " systemd"
 
+DISTRO_FEATURES:append = " systemd"
 DISTRO_FEATURES:remove = " \
 	wayland \
 	irda \
@@ -57,37 +57,49 @@ DISTRO_FEATURES:remove = " \
 	ntfs \
 	wifi \
 	bluetooth \
+	opengl \
+	vulkan \
+	cramfs \
+	alsa \
+	x11 \
 "
-
-DISTRO_FEATURES:append = " directfb"
 
 # servers
 IMAGE_INSTALL:append = " \
-	openssh-sftp-server dbus lighttpd \
+	dbus lighttpd \
 "
+# openssh-sftp-server
 
 # tools
 # f2fs-tools: create f2fs user data partition
 # gptfdisk: sgdisk, used to set up partition table (create user data partition)
 # util-linux: Various linux-related utilities, to force re-reading partition tables
 IMAGE_INSTALL:append = " \
-	curl i2c-tools mmc-utils u-boot-env \
-    f2fs-tools gptfdisk util-linux \
+	curl i2c-tools mmc-utils u-boot-env f2fs-tools gptfdisk util-linux \
 "
 
-# software components
+# OpenAMP (for coprocessor communication)
+PREFERRED_PROVIDER_libmetal="libmetal"
 IMAGE_INSTALL:append = " \
 	open-amp \
 "
 
-# libraries (at runtime)
+# various generally useful libraries
 IMAGE_INSTALL:append = " \
 	bzip2 libdaemon libevent libevdev libjpeg-turbo libpng libubootenv libusb1 libxml2 \
-	libyaml readline sqlite3 \
+	libyaml readline sqlite3 libsocketcan \
 "
 
-# Qt and friends (for UI layer)
-# IMAGE_INSTALL:append = " packagegroup-qt6-essentials qtvirtualkeyboard qtcharts"
+# UI libraries
+# qt6: for GUI
+# libdrm: Accessing the DRM video drivers' API
+# fbset + fbset-modes: utility to change video modes (plus mode database)
+# TODO: define custom modes for LCD
+IMAGE_INSTALL:append = " \
+	libdrm\
+	fbset fbset-modes \
+"
+
 
 # force add the SSH server
 EXTRA_IMAGE_FEATURES:append = " \
