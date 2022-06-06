@@ -110,6 +110,19 @@ class FbSurface {
         }
 
         /**
+         * @brief Get framebuffer width
+         */
+        constexpr inline size_t getFbWidth() const {
+            return this->info.xres;
+        }
+        /**
+         * @brief Get framebuffer height
+         */
+        constexpr inline size_t getFbHeight() const {
+            return this->info.yres;
+        }
+
+        /**
          * @brief Clear the framebuffer to ther specified color.
          */
         void clear(const double r, const double g, const double b) {

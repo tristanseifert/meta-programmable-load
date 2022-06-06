@@ -8,9 +8,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <linux/kd.h>
+#include <sys/utsname.h>
 
 #include <atomic>
 #include <iostream>
+#include <sstream>
 
 /// Whether the main loop of the splash shall run
 std::atomic_bool gRun{true};
@@ -95,6 +97,28 @@ static void EnableConsole() {
 
 
 /**
+ * @brief Update version string
+ */
+static void UpdateVersionString(Drawer &d) {
+    int err;
+
+    std::stringstream str;
+
+    // get kernel version
+    struct utsname unameInfo;
+    err = uname(&unameInfo);
+
+    if(!err) {
+        str << "Kernel: " << unameInfo.sysname << " " << unameInfo.release << std::endl;
+    }
+
+    // update it
+    d.setVersion(str.str());
+}
+
+
+
+/**
  * Entry point of boot splash
  *
  * This opens the framebuffer, maps it in memory, and then enters the main drawing/event loop.
@@ -112,6 +136,8 @@ int main(const int argc, const char **argv) {
     fb.clear(0, 0, 0);
 
     Drawer drawer(fb);
+    UpdateVersionString(drawer);
+
     drawer.draw();
 
     // open listening socket (for events)

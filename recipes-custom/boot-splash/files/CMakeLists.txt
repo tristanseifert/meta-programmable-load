@@ -32,9 +32,13 @@ find_library(LIB_FREETYPE freetype REQUIRED)
 find_library(LIB_CAIRO cairo REQUIRED)
 find_library(LIB_HARFBUZZ harfbuzz REQUIRED)
 
-# pango uses pkgconfig
+# find pango using pkgconfig
 pkg_search_module(PKG_PANGO pango)
-find_library(LIB_PANGO pango-1.0 HINTS ${PKG_PANGO_LIBRARY_DIRS} REQUIRED)
+pkg_search_module(PKG_PANGOCAIRO pangocairo)
+
+# glib is a dependency of harfbuzz and pango
+pkg_search_module(PKG_GLIB2 glib-2.0)
+pkg_search_module(PKG_GOBJECT2 gobject-2.0)
 
 ###############
 # Splash daemon target
@@ -47,8 +51,10 @@ add_executable(boot-splash
 )
 
 target_include_directories(boot-splash PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/splash)
+
+target_include_directories(boot-splash PRIVATE ${PKG_PANGO_INCLUDE_DIRS})
 target_link_libraries(boot-splash PRIVATE ${LIB_PNG} ${LIB_FREETYPE} ${LIB_CAIRO} ${LIB_HARFBUZZ}
-    ${LIB_PANGO})
+    ${PKG_PANGO_LIBRARIES} ${PKG_GLIB2_LIBRARIES} ${PKG_GOBJECT2_LIBRARIES} ${PKG_PANGOCAIRO_LIBRARIES})
 
 INSTALL(TARGETS boot-splash RUNTIME DESTINATION /usr/sbin)
 
