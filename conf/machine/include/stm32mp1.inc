@@ -113,11 +113,12 @@ IMAGE_INSTALL:append = " \
 # gentium: serif-y
 # liberation: font family (sans, sans narrow, serif, mono)
 # inconsolata: monospaced font
-# dejavu: dejavu font family (sans, serif, mono)
+# dinish: DIN-style font
 IMAGE_INSTALL:append = " \
 	ttf-gentium \
 	ttf-liberation-sans ttf-liberation-sans-narrow ttf-liberation-serif ttf-liberation-mono \
 	ttf-inconsolata \
+	ttf-dinish \
 "
 # ttf-dejavu-sans ttf-dejavu-sans-condensed ttf-dejavu-serif ttf-dejavu-sans-mono
 
