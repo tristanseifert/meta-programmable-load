@@ -134,6 +134,15 @@ class FbSurface {
         }
 
         /**
+         * @brief Translate height to user coordinate space
+         */
+        inline double translateHeight(const double in) const {
+            double temp{in}, unused{0};
+            cairo_device_to_user_distance(this->ctx, &unused, &temp);
+            return temp;
+        }
+
+        /**
          * @brief Translate line width to user coordinate space
          */
         inline double translateWidth(const double in) const {

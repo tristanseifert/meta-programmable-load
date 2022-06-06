@@ -26,19 +26,53 @@ Drawer::~Drawer() {
 }
 
 /**
+ * @brief Draw background of screen
+ *
+ * For now, this just fills the screen with a solid color.
+ */
+void Drawer::drawBackground() {
+    auto ctx = this->surface.getContext();
+
+    // create gradient
+    auto pattern = cairo_pattern_create_linear(0.5, 0.1, 0.5, 0.9);
+
+    cairo_pattern_add_color_stop_rgb(pattern, 0, 0, 0, 0);
+    cairo_pattern_add_color_stop_rgb(pattern, 1, 0, 0, 0.2);
+
+    // fill with it
+    cairo_set_source(ctx, pattern);
+    cairo_paint(ctx);
+
+    // clean up
+    cairo_pattern_destroy(pattern);
+}
+
+/**
  * @brief Draw top banner
  */
 void Drawer::drawBanner() {
     auto ctx = this->surface.getContext();
 
+    // establish clipping rect (XXX: don't hardcode line height) and fill background
+    cairo_save(ctx);
+    cairo_rectangle(ctx, 0, kBannerTextY, 1, this->surface.translateHeight(48));
+    cairo_clip(ctx);
+
+    this->drawBackground();
+
+    // draw text
     SetSourceColor(ctx, kBannerTextColor);
     cairo_move_to(ctx, 0.5, kBannerTextY);
 
     this->renderText(this->banner, this->bannerFont, TextAlignment::Center);
+
+    cairo_restore(ctx);
 }
 
 /**
  * @brief Draw the progress bar
+ *
+ * This doesn't have to draw the background under as it's fully opaque.
  */
 void Drawer::drawProgressBar() {
     auto ctx = this->surface.getContext();
@@ -49,7 +83,7 @@ void Drawer::drawProgressBar() {
     // draw background (filled)
     if(this->progress > 0) {
         cairo_rectangle(ctx, barX, kProgressBarY, kProgressBarWidth * clampedProgress,
-                this->surface.translateWidth(kProgressBarHeight));
+                this->surface.translateHeight(kProgressBarHeight));
 
         SetSourceColor(ctx, kProgressBarFillColor);
         cairo_fill(ctx);
@@ -58,16 +92,16 @@ void Drawer::drawProgressBar() {
     // draw background (unfilled)
     cairo_rectangle(ctx, barX + (kProgressBarWidth * clampedProgress), kProgressBarY,
             kProgressBarWidth - (clampedProgress * kProgressBarWidth),
-            this->surface.translateWidth(kProgressBarHeight));
+            this->surface.translateHeight(kProgressBarHeight));
 
     SetSourceColor(ctx, kProgressBarInteriorColor);
     cairo_fill(ctx);
 
     // draw outline
     cairo_rectangle(ctx, barX, kProgressBarY, kProgressBarWidth,
-            this->surface.translateWidth(kProgressBarHeight));
+            this->surface.translateHeight(kProgressBarHeight));
 
-    cairo_set_line_width(ctx, this->surface.translateWidth(kProgressStrokeWidth));
+    cairo_set_line_width(ctx, this->surface.translateHeight(kProgressStrokeWidth));
     SetSourceColor(ctx, kProgressStrokeColor);
 
     cairo_stroke(ctx);
@@ -80,34 +114,53 @@ void Drawer::drawProgressBar() {
  * provide additional information about the current phase of boot.
  */
 void Drawer::drawProgressString() {
+    const auto kProgressTextY{kProgressBarY - this->surface.translateHeight(30)};
     auto ctx = this->surface.getContext();
+
+    // establish clipping rect (XXX: don't hardcode line height) and fill background
+    cairo_save(ctx);
+    cairo_rectangle(ctx, 0, kProgressTextY, 1, this->surface.translateHeight(26));
+    cairo_clip(ctx);
+
+    this->drawBackground();
 
     // draw string
     SetSourceColor(ctx, kProgressTextColor);
 
-    cairo_move_to(ctx, 0.5, kProgressBarY - this->surface.translateWidth(12));
+    cairo_move_to(ctx, 0.5, kProgressTextY);
     this->renderText(this->progressString, this->progressStringFont, TextAlignment::Center);
+
+    cairo_restore(ctx);
 }
 
 /**
  * @brief Draw the version strings
  */
 void Drawer::drawVersionStrings() {
-    // early out if version isn't known yet
-    if(this->versionString.empty()) {
-        return;
-    }
-
     auto ctx = this->surface.getContext();
-
-    // versions are left aligned with bar
     constexpr static const auto kX{(1.0 - kProgressBarWidth) / 2.};
 
+    // establish clipping rect (XXX: don't hardcode line height) and fill background
+    cairo_save(ctx);
+    cairo_rectangle(ctx, kX, kVersionTextY, kProgressBarWidth, 1. - kVersionTextY);
+    cairo_clip(ctx);
+
+    this->drawBackground();
+
+    // early out if version isn't known yet
+    if(this->versionString.empty()) {
+        goto done;
+    }
+
+    // versions are left aligned with bar
     SetSourceColor(ctx, kVersionTextColor);
     cairo_move_to(ctx, kX, kVersionTextY);
 
     this->renderText(this->versionString, this->versionFont, TextAlignment::Left);
 
+    // restore drawing state
+done:;
+    cairo_restore(ctx);
 }
 
 
@@ -122,7 +175,7 @@ void Drawer::loadFonts() {
     this->textLayout = pango_cairo_create_layout(this->surface.getContext());
 
     // get font descriptions
-    this->bannerFont = pango_font_description_from_string("Gentium Bold 32");
+    this->bannerFont = pango_font_description_from_string("DINishExpanded Bold 32");
     this->progressStringFont = pango_font_description_from_string("Liberation Sans Italic 16");
     this->versionFont = pango_font_description_from_string("Liberation Sans Regular 11");
 }
@@ -175,14 +228,14 @@ void Drawer::renderText(const std::string_view &str, PangoFontDescription *font,
 
     switch(align) {
         case TextAlignment::Left:
-            pY += -(static_cast<double>(height) / PANGO_SCALE);
+            //pY += -(static_cast<double>(height) / PANGO_SCALE);
             break;
         case TextAlignment::Center:
             pX += -(static_cast<double>(width) / PANGO_SCALE) / 2.;
-            pY += -(static_cast<double>(height) / PANGO_SCALE);
+            //pY += -(static_cast<double>(height) / PANGO_SCALE);
             break;
         case TextAlignment::Right:
-            pY += -(static_cast<double>(height) / PANGO_SCALE);
+            //pY += -(static_cast<double>(height) / PANGO_SCALE);
             break;
     }
 

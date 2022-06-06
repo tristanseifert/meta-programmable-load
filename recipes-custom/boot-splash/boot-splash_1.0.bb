@@ -6,9 +6,9 @@ DEPENDS = "libpng cairo freetype pango harfbuzz"
 
 # define the CMake source directories
 SRC_URI = "\
-	file://src/ \
-	file://include/ \
-	file://CMakeLists.txt \
+    file://src/ \
+    file://include/ \
+    file://CMakeLists.txt \
 "
 
 # simply use cmake

@@ -45,18 +45,41 @@ pkg_search_module(PKG_GOBJECT2 gobject-2.0)
 #
 # Builds the splash daemon, started early during boot, which opens a fixed framebuffer device and
 # renders the initial screen.
-add_executable(boot-splash
+add_executable(splash
     src/splash/main.cpp
     src/splash/Drawer.cpp
+    src/splash/RpcListener.cpp
 )
+set_target_properties(splash PROPERTIES OUTPUT_NAME bootsplash)
 
-target_include_directories(boot-splash PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/splash)
+target_include_directories(splash PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_include_directories(splash PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/splash)
 
-target_include_directories(boot-splash PRIVATE ${PKG_PANGO_INCLUDE_DIRS})
-target_link_libraries(boot-splash PRIVATE ${LIB_PNG} ${LIB_FREETYPE} ${LIB_CAIRO} ${LIB_HARFBUZZ}
+target_include_directories(splash PRIVATE ${PKG_PANGO_INCLUDE_DIRS})
+target_link_libraries(splash PRIVATE ${LIB_PNG} ${LIB_FREETYPE} ${LIB_CAIRO} ${LIB_HARFBUZZ}
     ${PKG_PANGO_LIBRARIES} ${PKG_GLIB2_LIBRARIES} ${PKG_GOBJECT2_LIBRARIES} ${PKG_PANGOCAIRO_LIBRARIES})
 
-INSTALL(TARGETS boot-splash RUNTIME DESTINATION /usr/sbin)
+INSTALL(TARGETS splash RUNTIME DESTINATION /usr/sbin)
+
+###############
+# Splash remote library
+#
+# This is a dynamic library that implements the RPC protocol between the splash daemon and any
+# applications that wish to control it.
+add_library(remotelib SHARED
+    src/remotelib/glue.cpp
+)
+
+target_include_directories(remotelib PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_include_directories(remotelib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include/remotelib)
+
+set_target_properties(remotelib PROPERTIES LIBRARY_OUTPUT_NAME splash-remote)
+set_target_properties(remotelib PROPERTIES PUBLIC_HEADER ${CMAKE_CURRENT_LIST_DIR}/include/remotelib/remote.h)
+set_target_properties(remotelib PROPERTIES VERSION ${PROJECT_VERSION})
+set_target_properties(remotelib PROPERTIES SOVERSION 1)
+
+INSTALL(TARGETS remotelib LIBRARY
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/splash)
 
 ###############
 # Splash control
@@ -64,5 +87,8 @@ INSTALL(TARGETS boot-splash RUNTIME DESTINATION /usr/sbin)
 # A command line utility to communicate with the splash daemon and update the messages and
 # progress information on the screen; it also allows requesting termination of the daemon once
 # boot has completed.
-
-# TODO: implement
+add_executable(splashctl
+    src/remotectl/main.cpp
+)
+set_target_properties(splashctl PROPERTIES OUTPUT_NAME bootsplashctl)
+target_link_libraries(splashctl PRIVATE remotelib)

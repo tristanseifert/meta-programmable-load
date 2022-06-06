@@ -1,6 +1,7 @@
 #include "config.h"
 #include "FbSurface.h"
 #include "Drawer.h"
+#include "RpcListener.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -133,19 +134,27 @@ int main(const int argc, const char **argv) {
     DisableConsole();
 
     FbSurface fb(Config::kFramebufferDevice);
-    fb.clear(0, 0, 0);
 
     Drawer drawer(fb);
     UpdateVersionString(drawer);
 
+    drawer.drawBackground();
     drawer.draw();
 
     // open listening socket (for events)
+    RpcListener rpc;
 
     // process messages
     while(gRun) {
-        // TODO: poll on the eventfd/wait for signal
-        pause();
+        try {
+            rpc.handleEvents(drawer);
+        } catch(const std::exception &e) {
+            std::cerr << "RPC handle failed: " << e.what() << std::endl;
+        }
+
+        if(drawer.isDirty()) {
+            drawer.draw();
+        }
     }
 
     // if we get here, we exited normally
