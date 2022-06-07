@@ -92,3 +92,5 @@ add_executable(splashctl
 )
 set_target_properties(splashctl PROPERTIES OUTPUT_NAME bootsplashctl)
 target_link_libraries(splashctl PRIVATE remotelib)
+
+INSTALL(TARGETS splashctl RUNTIME DESTINATION /usr/bin)

@@ -38,74 +38,39 @@ WKS_FILE ?= "stm32mp1-sdcard.wks"
 # log files get persisted to data partition
 VOLATILE_LOG_DIR = "false"
 
-# Use systemd as init system
-VIRTUAL-RUNTIME_init_manager = "systemd"
-DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
-VIRTUAL-RUNTIME_initscripts = ""
-
-DISTRO_FEATURES:append = " systemd"
-DISTRO_FEATURES:remove = " \
-	wayland \
-	irda \
-	ppp \
-	pcmcia \
-	smbfs \
-	pci \
-	3g \
-	nfc \
-	efi \
-	ntfs \
-	wifi \
-	bluetooth \
-	opengl \
-	vulkan \
-	cramfs \
-	alsa \
-	x11 \
-"
-
 # servers
 IMAGE_INSTALL:append = " \
-	dbus lighttpd \
+    lighttpd \
 "
-# openssh-sftp-server
 
 # tools
-# f2fs-tools: create f2fs user data partition
-# gptfdisk: sgdisk, used to set up partition table (create user data partition)
-# util-linux: Various linux-related utilities, to force re-reading partition tables
 IMAGE_INSTALL:append = " \
-	curl i2c-tools mmc-utils u-boot-env f2fs-tools gptfdisk util-linux \
+    curl i2c-tools mmc-utils u-boot-env \
 "
 
 # OpenAMP (for coprocessor communication)
 PREFERRED_PROVIDER_libmetal="libmetal"
 IMAGE_INSTALL:append = " \
-	open-amp \
+    open-amp \
 "
 
 # various generally useful libraries
 IMAGE_INSTALL:append = " \
-	bzip2 libdaemon libevent libevdev libjpeg-turbo libpng libubootenv libusb1 libxml2 \
-	libyaml readline sqlite3 libsocketcan \
+    libjpeg-turbo libpng libubootenv libusb1 libsocketcan \
 "
 
 # UI libraries
 # boot-splash: Custom bootup splash screen
-# libdrm: Accessing the DRM video drivers' API
-# fbset + fbset-modes: utility to change video modes (plus mode database)
-# TODO: define custom modes for LCD
+# TODO: define custom modes for LCD (fbset-modes overlay)
 # cairo: generic graphics library
 # freetype: TTF rendering
 # harfbuzz: Text shaping engine
 # pango: Text rendering engine
 # qrencode: rendering of qr codes
 IMAGE_INSTALL:append = " \
-	boot-splash \
-	libdrm\
-	fbset fbset-modes \
-	cairo freetype harfbuzz pango \
-	qrencode \
+    boot-splash \
+    cairo freetype harfbuzz pango \
+    qrencode \
 "
 
 # fonts for GUI
@@ -115,12 +80,12 @@ IMAGE_INSTALL:append = " \
 # inconsolata: monospaced font
 # dinish: DIN-style font
 IMAGE_INSTALL:append = " \
-	ttf-gentium \
-	ttf-liberation-sans ttf-liberation-sans-narrow ttf-liberation-serif ttf-liberation-mono \
-	ttf-inconsolata \
-	ttf-dinish \
+    ttf-gentium \
+    ttf-liberation-sans ttf-liberation-sans-narrow ttf-liberation-serif ttf-liberation-mono \
+    ttf-inconsolata \
+    ttf-dinish \
 "
-# ttf-dejavu-sans ttf-dejavu-sans-condensed ttf-dejavu-serif ttf-dejavu-sans-mono
 
 # custom programmable load stuff
 IMAGE_INSTALL:append = " pl-root-overlays"
+
