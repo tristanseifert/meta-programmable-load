@@ -3,8 +3,8 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 # custom version modifier
 UBOOT_LOCALVERSION = "-programmable-load"
 
-# use a newer u-boot (v2022.07-rc3)
-SRCREV = "b6d46d951f1092f810e5d5971fb9a3dee8e87e86"
+# use a newer u-boot (v2022.07-rc4)
+SRCREV = "8f527342db4160a1f030de6fe4a1591787cce65a"
 LIC_FILES_CHKSUM = "file://Licenses/README;md5=2ca5f2c35c8cc335f0a19756634782f1"
 
 # extlinux config
