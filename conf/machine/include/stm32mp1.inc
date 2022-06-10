@@ -86,6 +86,12 @@ IMAGE_INSTALL:append = " \
     ttf-dinish \
 "
 
-# custom programmable load stuff
+##### custom programmable load stuff
+# root fs overlays (for app data)
 IMAGE_INSTALL:append = " pl-root-overlays"
+# general programmable load firmware stuff
+IMAGE_INSTALL:append = " pl-app-meta"
+# real-time control firmware
+
+# user interface and remote
 

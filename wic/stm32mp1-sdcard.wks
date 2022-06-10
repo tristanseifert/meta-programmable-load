@@ -8,7 +8,6 @@ part ssbl --source rawcopy --sourceparams="file=u-boot.img" --ondisk mmcblk --al
 #part / --source rootfs --ondisk mmcblk --fstype=erofs --mkfs-extraopts="-zlz4hc" --align 128 --size 768M --active --part-name rootfs
 # part / --source rootfs --ondisk mmcblk --fstype=erofs --mkfs-extraopts="-zlz4hc" --align 128 --size 768M --active --part-name rootfs
 part / --source rootfs --ondisk mmcblk --fstype=erofs --mkfs-extraopts="-zlz4hc" --align 128 --size 256M --active --part-name rootfs
-#part /app --ondisk mmcblk --fstype=erofs --mkfs-extraopts="-zlz4hc" --align 4 --size 128M --part-name appfs
 
 # reserve space for an F2FS user data partition
 # part /userdata --source empty --ondisk mmcblk --align 1024 --size 4M --label userdata --part-name userdata

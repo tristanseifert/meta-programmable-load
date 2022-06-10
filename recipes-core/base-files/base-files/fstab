@@ -1,17 +1,17 @@
 # mount rootfs based on bootloader config
-/dev/root            /                    auto       ro              1  0
+/dev/root                       /               erofs   ro      1       0
 
 # persistent user data (already mounted by pre-init helper)
-/dev/disk/by-label/userdata	/persistent	f2fs	compress_algorithm=zstd:6,compress_chksum,whint_mode=fs-based,gc_merge,lazytime,noatime	0	0
+/dev/disk/by-label/userdata     /persistent     f2fs    compress_algorithm=zstd:6,compress_chksum,whint_mode=fs-based,gc_merge,lazytime,noatime 0       0
 
 # overlays onto rootfs (/etc overlay already mounted by pre-init helper)
-none	 			/etc 		overlay	lowerdir=/etc,upperdir=/persistent/overlay/etc,workdir=/persistent/overlay/.etc-work
-# none	 			/usr/etc 	overlay	lowerdir=/usr/etc,upperdir=/persistent/overlay/usr/etc,workdir=/persistent/overlay/.usr-etc-work
-none	 			/home 		overlay	lowerdir=/home,upperdir=/persistent/overlay/home,workdir=/persistent/overlay/.home-work
-none	 			/var/log 	overlay	lowerdir=/var/log,upperdir=/persistent/logs/system,workdir=/persistent/overlay/.var-log-work
+none                            /etc            overlay	lowerdir=/etc,upperdir=/persistent/overlay/etc,workdir=/persistent/overlay/.etc-work
+# none                          /usr/etc        overlay	lowerdir=/usr/etc,upperdir=/persistent/overlay/usr/etc,workdir=/persistent/overlay/.usr-etc-work
+none                            /home           overlay	lowerdir=/home,upperdir=/persistent/overlay/home,workdir=/persistent/overlay/.home-work
+none                            /var/log        overlay	lowerdir=/var/log,upperdir=/persistent/logs/system,workdir=/persistent/overlay/.var-log-work
 
 # pseudo filesystems
-proc				/proc         	proc    defaults 0	0
-devpts               		/dev/pts        devpts  mode=0620,ptmxmode=0666,gid=5 0	0
-tmpfs                		/run            tmpfs   mode=0755,nodev,nosuid,strictatime 0	0
-tmpfs                		/var/volatile   tmpfs	defaults 0	0
+proc                            /proc           proc    defaults 0      0
+devpts                          /dev/pts        devpts  mode=0620,ptmxmode=0666,gid=5 0 0
+tmpfs                           /run            tmpfs   mode=0755,nodev,nosuid,strictatime 0    0
+tmpfs                           /var/volatile   tmpfs   defaults 0      0
