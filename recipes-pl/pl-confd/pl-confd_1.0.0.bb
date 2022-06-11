@@ -2,11 +2,12 @@ SUMMARY = "Programmable load config daemon"
 LICENSE = "ISC"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/ISC;md5=f3b90e78ea0cffb20bf5cca7947a896d"
 PR = "r0"
-DEPENDS = "pl-app-meta sqlite3 libcbor systemd"
+DEPENDS = "pl-app-meta sqlite3 libcbor systemd git"
 RDEPENDS:${PN} = "libsystemd"
 
 # define the CMake source directories
 SRC_URI = "\
+    file://lib/ \
     file://src/ \
     file://include/ \
     file://CMakeLists.txt \
@@ -31,6 +32,15 @@ FILES:${PN} += "${systemd_unitdir}/system/confd.service"
 do_install:append() {
     install -d ${D}/${systemd_unitdir}/system
     install -m 0644 ${WORKDIR}/data/confd.service ${D}/${systemd_unitdir}/system
+}
+
+# install configuration files
+SRC_URI:append = " file://data/confd.toml "
+FILES:${PN} += "/usr/etc/confd.toml"
+
+do_install:append() {
+    install -d ${D}/usr/etc
+    install -m 0644 ${WORKDIR}/data/confd.toml ${D}/usr/etc
 }
 
 # create users

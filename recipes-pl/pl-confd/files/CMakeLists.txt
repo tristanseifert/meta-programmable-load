@@ -8,6 +8,9 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 project(load-confd VERSION 1.0 LANGUAGES C CXX)
 
+include(ExternalProject)
+include(FetchContent)
+
 ###############
 # Set warning levels and language version
 set(CMAKE_CXX_STANDARD 20)
@@ -23,10 +26,18 @@ endif()
 
 ###############
 # Find our dependencies
-find_package(PkgConfig)
+find_package(PkgConfig REQUIRED)
+find_package(Git REQUIRED)
 
 find_package(SQLite3 REQUIRED)
 pkg_search_module(PKG_LIBCBOR libcbor)
+
+# Remote dependencies
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
+
+# option(SQLITECPP_INTERNAL_SQLITE "Add the internal SQLite3 source to the project." ON CACHE)
+set(SQLITECPP_INTERNAL_SQLITE OFF CACHE BOOL "")
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/SQLiteCpp EXCLUDE_FROM_ALL)
 
 ###############
 # Config daemon target
@@ -35,13 +46,14 @@ pkg_search_module(PKG_LIBCBOR libcbor)
 # are systemd unit files.
 add_executable(daemon
     src/daemon/main.cpp
+    src/daemon/Config.cpp
     src/daemon/watchdog.cpp
 )
 set_target_properties(daemon PROPERTIES OUTPUT_NAME confd)
 
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/daemon)
-target_link_libraries(daemon PRIVATE SQLite::SQLite3 rpc-helper)
+target_link_libraries(daemon PRIVATE SQLite::SQLite3 rpc-helper SQLiteCpp tomlplusplus::tomlplusplus)
 
 INSTALL(TARGETS daemon RUNTIME DESTINATION /usr/sbin)
 

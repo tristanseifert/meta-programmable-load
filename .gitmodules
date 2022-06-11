@@ -1,0 +1,6 @@
+[submodule "recipes-pl/pl-confd/files/lib/tomlplusplus"]
+	path = recipes-pl/pl-confd/files/lib/tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git
+[submodule "recipes-pl/pl-confd/files/lib/SQLiteCpp"]
+	path = recipes-pl/pl-confd/files/lib/SQLiteCpp
+	url = https://github.com/SRombauts/SQLiteCpp.git

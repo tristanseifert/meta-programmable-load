@@ -1,0 +1,30 @@
+# Configuration for `confd`
+[storage]
+dir = "/persistent/config/confd-data"
+db = "storage.db"
+
+[access]
+default = "deny"
+
+# embedded controller arbiter
+[[access.allow]]
+user = "load-fw"
+paths = [
+    "fw.*"
+]
+
+# USB and network remote control process
+[[access.allow]]
+user = "load-remote"
+paths = [
+    "remote.*"
+]
+
+# user interface process
+[[access.allow]]
+user = "load-ui"
+paths = [
+    "ui.*",
+    "remote.settings.*",
+    "auth.settings.*",
+]

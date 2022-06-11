@@ -6,6 +6,9 @@
 #include <iostream>
 #include <string>
 
+#include <toml++/toml.h>
+
+#include "Config.h"
 #include "watchdog.h"
 
 /// Whether the server shall continue to listen and process requests
@@ -62,15 +65,15 @@ static void InstallSignalHandler() {
  * opening the listening socket) before entering a loop to accept and process clients forever.
  */
 int main(const int argc, char * const * argv) {
-    std::string dataDir;
+    std::string confPath;
 
     // parse command line
     int c;
     while(1) {
         int index{0};
         const static struct option options[] = {
-            // data directory
-            {"data",                    required_argument, 0, 0},
+            // config file
+            {"config",                  required_argument, 0, 0},
             {nullptr,                   0, 0, 0},
         };
 
@@ -82,21 +85,30 @@ int main(const int argc, char * const * argv) {
         }
         // long option (based on index)
         else if(!c) {
-            // data directory
             if(index == 0) {
-                dataDir = optarg;
+                confPath = optarg;
             }
         }
     }
 
-    if(dataDir.empty()) {
-        std::cerr << "you must specify a data directory with --data" << std::endl;
+    if(confPath.empty()) {
+        std::cerr << "you must specify a config file (--config)" << std::endl;
         return -1;
     }
 
     // early setup
     InstallSignalHandler();
     Watchdog::Init();
+
+    try {
+        Config::Read(confPath);
+    } catch(const toml::parse_error &err) {
+        std::cerr << "failed to parse config: " << err << std::endl;
+        return -1;
+    } catch(const std::runtime_error &err) {
+        std::cerr << "config invalid: " << err.what() << std::endl;
+        return -1;
+    }
 
     // open and initialize data store
     // TODO: implement

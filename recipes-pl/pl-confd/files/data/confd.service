@@ -2,7 +2,7 @@
 Description=System configuration daemon
 
 [Service]
-ExecStart=/usr/sbin/confd --data /persistent/config/confd-data/
+ExecStart=/usr/sbin/confd --config /usr/etc/confd.toml
 Type=notify
 WatchdogSec=10
 Restart=on-failure
