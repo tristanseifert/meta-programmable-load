@@ -2,7 +2,9 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <event2/event.h>
 
+#include <atomic>
 #include <cerrno>
 #include <cstring>
 #include <system_error>
@@ -13,14 +15,16 @@
 #include "RpcServer.h"
 #include "watchdog.h"
 
-/**
- * @brief Initialize the RPC server
- *
- * Create the listening socket and bind to it, then permit accepting connections.
- */
-RpcServer::RpcServer() {
-    int err;
+// declared in main.cpp
+extern std::atomic_bool gRun;
 
+/**
+ * @brief Initialize the listening socket
+ *
+ * Create and bind the domain socket used for RPC requests.
+ */
+void RpcServer::initSocket() {
+    int err;
     const auto path = Config::GetRpcSocketPath().c_str();
 
     // create the socket
@@ -66,6 +70,94 @@ RpcServer::RpcServer() {
     if(err == -1) {
         throw std::system_error(errno, std::generic_category(), "listen rpc socket");
     }
+
+}
+
+/**
+ * @brief Initialize the event loop.
+ */
+void RpcServer::initEventLoop() {
+    // create the event base
+    this->evbase = event_base_new();
+    if(!this->evbase) {
+        throw std::runtime_error("failed to allocate event_base");
+    }
+
+    // create built-in events
+    this->initWatchdogEvent();
+    this->initSignalEvents();
+    this->initSocketEvent();
+}
+
+/**
+ * @brief Create watchdog event
+ *
+ * Create a timer event with half of the period of the watchdog timer. Every time the event fires,
+ * it will kick the watchdog to ensure we don't get killed.
+ */
+void RpcServer::initWatchdogEvent() {
+    // bail if watchdog is disabled
+    if(!Watchdog::IsActive()) {
+        PLOG_VERBOSE << "watchdog disabled, skipping event creation";
+        return;
+    }
+
+    // get interval
+    const auto usec = Watchdog::GetInterval().count();
+
+    // create and add event
+    this->watchdogEvent = event_new(this->evbase, -1, EV_PERSIST, [](auto, auto, auto ctx) {
+        Watchdog::Kick();
+    }, this);
+    if(!this->watchdogEvent) {
+        throw std::runtime_error("failed to allocate watchdog event");
+    }
+
+    struct timeval tv{
+        .tv_sec  = static_cast<time_t>(usec / 1'000'000U),
+        .tv_usec = static_cast<suseconds_t>(usec % 1'000'000U),
+    };
+
+    evtimer_add(this->watchdogEvent, &tv);
+}
+
+/**
+ * @brief Create termination signal events
+ *
+ * Create an event that watches for POSIX signals that indicate we should restart: specifically,
+ * this is SIGINT, SIGTERM, and SIGHUP.
+ */
+void RpcServer::initSignalEvents() {
+    size_t i{0};
+
+    for(const auto signum : kEvents) {
+        auto ev = evsignal_new(this->evbase, signum, [](auto fd, auto what, auto ctx) {
+            reinterpret_cast<RpcServer *>(ctx)->handleTermination();
+        }, this);
+        if(!ev) {
+            throw std::runtime_error("failed to allocate signal event");
+        }
+
+        event_add(ev, nullptr);
+        this->signalEvents[i++] = ev;
+    }
+}
+
+/**
+ * @brief Initialize the event for the listening socket
+ *
+ * This event fires any time a client connects. It serves as the primary event.
+ */
+void RpcServer::initSocketEvent() {
+    this->listenEvent = event_new(this->evbase, this->listenSock, (EV_READ | EV_PERSIST),
+            [](auto fd, auto what, auto ctx) {
+        reinterpret_cast<RpcServer *>(ctx)->acceptClient();
+    }, this);
+    if(!this->listenEvent) {
+        throw std::runtime_error("failed to allocate listen event");
+    }
+
+    event_add(this->listenEvent, nullptr);
 }
 
 /**
@@ -76,6 +168,9 @@ RpcServer::RpcServer() {
  */
 RpcServer::~RpcServer() {
     int err;
+
+    // shut down event loop
+    event_base_free(this->evbase);
 
     // close and unlink listening socket
     PLOG_DEBUG << "Closing RPC server socket";
@@ -90,6 +185,18 @@ RpcServer::~RpcServer() {
     // close all clients
     PLOG_DEBUG << "Closing client connections";
 
+    // release events
+    event_free(this->listenEvent);
+    for(auto ev : this->signalEvents) {
+        if(!ev) {
+            continue;
+        }
+        event_free(ev);
+    }
+
+    if(this->watchdogEvent) {
+        event_free(this->watchdogEvent);
+    }
 }
 
 /**
@@ -98,11 +205,30 @@ RpcServer::~RpcServer() {
  * Block on the listening socket, and all active client sockets, to wait for data to be received or
  * some other type of event.
  *
- * @remark This waits up to a maximum number of microseconds so that we may kick the watchdog, if
- *         it is enabled. The interval is set to half of the watchdog notification interval.
+ * @remark This will sit here basically forever; kicking of the watchdog is implemented by means
+ *         of a timer callback that runs periodically.
  */
 void RpcServer::run() {
-    // get maximum block time
+    event_base_dispatch(this->evbase);
+}
 
-    // TODO: implement
+
+
+/**
+ * @brief Handle a signal that indicates the process should terminate
+ */
+void RpcServer::handleTermination() {
+    PLOG_INFO << "Received signal, terminating...";
+
+    gRun = false;
+    event_base_loopbreak(this->evbase);
+}
+
+/**
+ * @brief Accept a single waiting client
+ *
+ * Accepts one client on the listening socket, and sets up a connection struct for it.
+ */
+void RpcServer::acceptClient() {
+    // TODO
 }

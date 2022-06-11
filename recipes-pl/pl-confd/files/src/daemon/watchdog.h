@@ -18,7 +18,7 @@ class Watchdog {
         static void Kick();
 
         /// Is the watchdog enabled?
-        static const bool GetActive() {
+        static const bool IsActive() {
             return gIsActive;
         }
         /// Return the watchdog interval

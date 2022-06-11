@@ -1,6 +1,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <unistd.h>
+#include <event2/event.h>
 
 #include <atomic>
 #include <cstdlib>
@@ -45,45 +46,55 @@ static void InitLog(const plog::Severity level, const bool simple) {
 }
 
 /**
- * @brief Signal handler
+ * @brief Initialize libevent
  *
- * This handler is installed for all signals on which we quit; it sets an atomic flag, and signals
- * the main loop (if needed) so that it wakes up and we terminate.
+ * Configure the log callback for libevent to use our existing logging machinery.
  */
-static void SignalHandler(int signum) {
-    gRun = false;
+static void InitLibevent() {
+    event_set_log_callback([](const auto severity, const auto msg) {
+        switch(severity) {
+            case EVENT_LOG_DEBUG:
+                PLOG_DEBUG << msg;
+                break;
+            case EVENT_LOG_MSG:
+                PLOG_INFO << msg;
+                break;
+            case EVENT_LOG_WARN:
+                PLOG_WARNING << msg;
+                break;
+            default:
+                PLOG_ERROR << msg;
+                break;
+        }
+    });
 }
 
 /**
- * @brief Installs signal handlers
+ * @brief Server's main loop
  *
- * Configures handlers for SIGINT, SIGHUP and SIGTERM. These in turn ensure that the server has
- * an orderly shutdown, including syncing the data store.
+ * Continually handle events on the RPC sockets (this is done with libevent behind the scenes)
+ * until the run flag is cleared.
+ *
+ * This is a separate function so we run the destructor of the RPC server immediately to begin the
+ * shutdown sequence, including closing the listening sockets and any remaining client connections
+ * and their associated resources.
  */
-static void InstallSignalHandler() {
-    struct sigaction newAction, oldAction;
+static void MainLoop() {
+    RpcServer server;
 
-    // all signals use the same handler
-    newAction.sa_handler = SignalHandler;
-    sigemptyset(&newAction.sa_mask);
-    newAction.sa_flags = 0;
+    PLOG_VERBOSE << "starting runloop";
 
-    // install them, unless said signal is ignored
-    sigaction(SIGINT, NULL, &oldAction);
-    if(oldAction.sa_handler != SIG_IGN) {
-        sigaction(SIGINT, &newAction, NULL);
+    // start the watchdog here (it's kicked in the run loop)
+    Watchdog::Start();
+
+    // run until flag is cleared
+    while(gRun) {
+        server.run();
     }
 
-    sigaction(SIGHUP, NULL, &oldAction);
-    if(oldAction.sa_handler != SIG_IGN) {
-        sigaction(SIGHUP, &newAction, NULL);
-    }
-
-    sigaction(SIGTERM, NULL, &oldAction);
-    if(oldAction.sa_handler != SIG_IGN) {
-        sigaction(SIGTERM, &newAction, NULL);
-    }
-
+    // stop the watchdog here (we'll no longer be kicking it)
+    PLOG_INFO << "shutting down...";
+    Watchdog::Stop();
 }
 
 /**
@@ -163,10 +174,8 @@ int main(const int argc, char * const * argv) {
         return -1;
     }
 
-    // early setup
-    InstallSignalHandler();
+    // do basic initialization and set up config
     InitLog(logLevel, logSimple);
-
     Watchdog::Init();
 
     try {
@@ -184,24 +193,9 @@ int main(const int argc, char * const * argv) {
     // open and initialize data store
     // TODO: implement
 
-    // set up server
-    RpcServer server;
-
-    // main server loop
-    Watchdog::Start();
-
-    PLOG_VERBOSE << "starting runloop";
-    while(gRun) {
-        server.run();
-
-        sleep(2);
-        Watchdog::Kick();
-    }
-    PLOG_INFO << "shutting down...";
-
-    Watchdog::Stop();
-
-    // shut down server connections
+    // perform server setup, then enter run loop
+    InitLibevent();
+    MainLoop();
 
     // close data store
 

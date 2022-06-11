@@ -2,7 +2,7 @@
 Description=System configuration daemon
 
 [Service]
-ExecStart=/usr/sbin/confd --config /usr/etc/confd.toml
+ExecStart=/usr/sbin/confd --config /usr/etc/confd.toml --log-simple
 Type=notify
 WatchdogSec=10
 Restart=on-failure
