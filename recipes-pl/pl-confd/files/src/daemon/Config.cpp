@@ -3,8 +3,8 @@
 
 #include <cerrno>
 #include <stdexcept>
-#include <iostream>
 
+#include <plog/Log.h>
 #include <toml++/toml.h>
 
 #include "Config.h"
@@ -58,7 +58,7 @@ void Config::ReadStorage(const toml::table &tbl) {
 
     gStoragePath /= name;
 
-    std::cout << "storage path: " << gStoragePath << std::endl;
+    PLOG_INFO << "storage path: " << gStoragePath;
 }
 
 /**
