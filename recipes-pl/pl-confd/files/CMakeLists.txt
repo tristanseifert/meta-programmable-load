@@ -30,13 +30,17 @@ find_package(PkgConfig REQUIRED)
 find_package(Git REQUIRED)
 
 find_package(SQLite3 REQUIRED)
+
 pkg_search_module(PKG_LIBCBOR libcbor)
+link_directories(${PKG_LIBCBOR_LIBRARY_DIRS})
 
 # Remote dependencies
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 
 # option(SQLITECPP_INTERNAL_SQLITE "Add the internal SQLite3 source to the project." ON CACHE)
 set(SQLITECPP_INTERNAL_SQLITE OFF CACHE BOOL "")
+set(SQLITE_OMIT_LOAD_EXTENSION ON CACHE BOOL "")
+add_compile_options(-DSQLITE_OMIT_LOAD_EXTENSION) # this _should_ be enabled by the above ^
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/SQLiteCpp EXCLUDE_FROM_ALL)
 
 ###############
