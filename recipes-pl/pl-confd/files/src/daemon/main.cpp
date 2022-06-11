@@ -6,6 +6,10 @@
 #include <iostream>
 #include <string>
 
+#include <plog/Log.h>
+#include <plog/Appenders/ConsoleAppender.h>
+#include <plog/Formatters/FuncMessageFormatter.h>
+#include <plog/Init.h>
 #include <toml++/toml.h>
 
 #include "Config.h"
@@ -15,6 +19,17 @@
 std::atomic_bool gRun{true};
 
 
+/**
+ * @brief Initialize logging
+ *
+ * Sets up the plog logging framework. We redirect all log output to stderr, under the assumption
+ * that we'll be running under some sort of supervisor that handles capturing and storing
+ * these messages.
+ */
+static void InitLog() {
+    static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
+    plog::init(plog::debug, &ttyAppender);
+}
 
 /**
  * @brief Signal handler
@@ -98,15 +113,17 @@ int main(const int argc, char * const * argv) {
 
     // early setup
     InstallSignalHandler();
+    InitLog();
+
     Watchdog::Init();
 
     try {
         Config::Read(confPath);
     } catch(const toml::parse_error &err) {
-        std::cerr << "failed to parse config: " << err << std::endl;
+        PLOG_FATAL << "failed to parse config: " << err;
         return -1;
     } catch(const std::runtime_error &err) {
-        std::cerr << "config invalid: " << err.what() << std::endl;
+        PLOG_FATAL << "config invalid: " << err.what();
         return -1;
     }
 
