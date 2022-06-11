@@ -17,7 +17,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-Wall -Wmissing-declarations -Wformat=2 -fdiagnostics-color=always
-    -ftls-model=initial-exec -Wundef -Wcast-qual -Wwrite-strings)
+    -ftls-model=initial-exec -Wundef -Wcast-qual -Wwrite-strings -Wno-format-nonliteral)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     add_compile_options(-Werror -Wimplicit-fallthrough -Wno-deprecated-copy -Wno-address-of-packed-member
@@ -31,8 +31,11 @@ find_package(Git REQUIRED)
 
 find_package(SQLite3 REQUIRED)
 
-pkg_search_module(PKG_LIBCBOR libcbor)
+pkg_search_module(PKG_LIBCBOR REQUIRED libcbor)
 link_directories(${PKG_LIBCBOR_LIBRARY_DIRS})
+
+pkg_search_module(PKG_LIBEVENT REQUIRED libevent)
+link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
 
 # Remote dependencies
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
@@ -52,6 +55,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/SQLiteCpp EXCLUDE_FROM_ALL)
 add_executable(daemon
     src/daemon/main.cpp
     src/daemon/Config.cpp
+    src/daemon/RpcServer.cpp
     src/daemon/watchdog.cpp
 )
 set_target_properties(daemon PROPERTIES OUTPUT_NAME confd)
@@ -60,6 +64,9 @@ target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/daemon)
 target_link_libraries(daemon PRIVATE SQLite::SQLite3 rpc-helper plog::plog SQLiteCpp
     tomlplusplus::tomlplusplus)
+
+target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS})
+target_link_libraries(daemon PRIVATE ${PKG_LIBEVENT_LIBRARIES})
 
 INSTALL(TARGETS daemon RUNTIME DESTINATION /usr/sbin)
 

@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <system_error>
 
+#include <plog/Log.h>
+
 #include "watchdog.h"
 
 bool Watchdog::gIsActive{false};
@@ -38,6 +40,9 @@ void Watchdog::Init() {
     else {
         throw std::system_error(errno, std::generic_category(), "sd_watchdog_enabled");
     }
+
+    PLOG_DEBUG << "Watchdog is " << (gIsActive ? "enabled" : "disabled") << ", interval "
+               << gInterval.count() << " µS";
 }
 
 /**
@@ -47,6 +52,7 @@ void Watchdog::Init() {
  * and in turn should start being supervised.
  */
 void Watchdog::Start() {
+    PLOG_DEBUG << "sd_notify ready";
     sd_notify(0, "READY=1");
 }
 
@@ -56,6 +62,7 @@ void Watchdog::Start() {
  * This notifies systemd we're beginning shutdown.
  */
 void Watchdog::Stop() {
+    PLOG_DEBUG << "sd_notify stopping";
     sd_notify(0, "STOPPING=1");
 }
 
@@ -74,7 +81,7 @@ void Watchdog::Kick() {
 #warning Watchdog support is stubbed out!
 
 void Watchdog::Init() {
-
+    PLOG_WARNING << "Watchdog not supported";
 }
 void Watchdog::Start() {
 

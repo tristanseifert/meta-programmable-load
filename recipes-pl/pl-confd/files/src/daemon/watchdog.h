@@ -17,6 +17,15 @@ class Watchdog {
         static void Stop();
         static void Kick();
 
+        /// Is the watchdog enabled?
+        static const bool GetActive() {
+            return gIsActive;
+        }
+        /// Return the watchdog interval
+        static const auto GetInterval() {
+            return gInterval;
+        }
+
     private:
         /// Whether the watchdog is activated
         static bool gIsActive;

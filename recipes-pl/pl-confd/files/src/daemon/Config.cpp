@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <grp.h>
 #include <pwd.h>
 
 #include <cerrno>
@@ -9,6 +10,7 @@
 
 #include "Config.h"
 
+std::filesystem::path Config::gSocketPath;
 std::filesystem::path Config::gStoragePath;
 std::vector<Config::AccessDescriptor> Config::gAllowList;
 
@@ -19,6 +21,14 @@ std::vector<Config::AccessDescriptor> Config::gAllowList;
  */
 void Config::Read(const std::filesystem::path &path) {
     const auto tbl = toml::parse_file(path.native());
+
+    // RPC settings
+    const auto rpc = tbl["rpc"];
+    if(!rpc || !rpc.is_table()) {
+        throw std::runtime_error("invalid `rpc` key");
+    }
+
+    ReadRpc(*rpc.as_table());
 
     // data store settings
     const auto storage = tbl["storage"];
@@ -33,6 +43,22 @@ void Config::Read(const std::filesystem::path &path) {
     if(!access || !access.is_table()) {
         throw std::runtime_error("invalid `access` key");
     }
+
+    ReadAccess(*access.as_table());
+}
+
+/**
+ * @brief Read RPC configuration
+ *
+ * This just reads out the listen socket path.
+ */
+void Config::ReadRpc(const toml::table &tbl) {
+    const std::string path = tbl["listen"].value_or("");
+    if(path.empty()) {
+        throw std::runtime_error("invalid `rpc.listen` key (expected string)");
+    }
+
+    gSocketPath = path;
 }
 
 /**
@@ -57,8 +83,6 @@ void Config::ReadStorage(const toml::table &tbl) {
     }
 
     gStoragePath /= name;
-
-    PLOG_INFO << "storage path: " << gStoragePath;
 }
 
 /**
@@ -101,32 +125,60 @@ void Config::ReadAccessAllow(const toml::table &tbl) {
 
     // get the access specifier
     const auto user = tbl["user"];
-    if(!user) {
-        throw std::runtime_error("missing access.allow.user key");
+    if(user) {
+        user.visit([&desc](auto&& n) {
+            // look up username
+            if constexpr (toml::is_string<decltype(n)>) {
+                const auto name = *n;
+
+                errno = 0;
+                const auto pwd = getpwnam(name.c_str());
+                if(!pwd && errno) {
+                    throw std::system_error(errno, std::generic_category(), "getpwnam");
+                } else if(!pwd) {
+                    PLOG_ERROR << "failed to look up username '" << name << "'!";
+                } else {
+                    desc.user = pwd->pw_uid;
+                }
+            }
+            // literal uid
+            else if constexpr (toml::is_integer<decltype(n)>) {
+                desc.user = static_cast<uid_t>(*n);
+            } else {
+                throw std::runtime_error("invalid access.allow.user value (expected integer or string)");
+            }
+        });
     }
 
-    user.visit([&desc](auto&& n) {
-        // look up username
-        if constexpr (toml::is_string<decltype(n)>) {
-            const auto name = *n;
+    const auto group = tbl["group"];
+    if(group) {
+        group.visit([&desc](auto&& n) {
+            // look up group
+            if constexpr (toml::is_string<decltype(n)>) {
+                const auto name = *n;
 
-            errno = 0;
-            auto pwd = getpwnam(name.c_str());
-            if(!pwd && errno) {
-                throw std::system_error(errno, std::generic_category(), "getpwnam");
-            } else if(!pwd) {
-                //PLOG_ERROR << "failed to look up username '" << name << "'!";
-            } else {
-                desc.user = pwd->pw_uid;
+                errno = 0;
+                const auto grp = getgrnam(name.c_str());
+                if(!grp && errno) {
+                    throw std::system_error(errno, std::generic_category(), "getpwnam");
+                } else if(!grp) {
+                    PLOG_ERROR << "failed to look up group '" << name << "'!";
+                } else {
+                    desc.group = grp->gr_gid;
+                }
             }
-        }
-        // literal uid
-        else if constexpr (toml::is_integer<decltype(n)>) {
-            desc.user = static_cast<uid_t>(*n);
-        } else {
-            throw std::runtime_error("invalid access.allow.user value (expected integer or string)");
-        }
-    });
+            // literal gid
+            else if constexpr (toml::is_integer<decltype(n)>) {
+                desc.group = static_cast<gid_t>(*n);
+            } else {
+                throw std::runtime_error("invalid access.allow.group value (expected integer or string)");
+            }
+        });
+    }
+
+    if(!desc.user && !desc.group) {
+        throw std::runtime_error("invalid access.allow specifier: neither user nor group specified");
+    }
 
     // allowed key paths
     const auto paths = tbl["paths"];

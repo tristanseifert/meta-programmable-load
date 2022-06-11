@@ -1,4 +1,7 @@
 # Configuration for `confd`
+[rpc]
+listen = "/var/run/confd.sock"
+
 [storage]
 dir = "/persistent/config/confd-data"
 db = "storage.db"
