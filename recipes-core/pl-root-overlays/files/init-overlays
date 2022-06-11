@@ -77,10 +77,18 @@ init_userdata_format()
     /bin/mkdir -p /persistent/overlay/.var-log-work
 
     # apply permissions
-    chgrp -R load /persistent/appdata
-    chown -R load-control /persistent/appdata/control
-    chown -R load-remote /persistent/appdata/remote
-    chown -R load-ui /persistent/appdata/ui
+    /bin/chown -R load-fw /persistent/appdata/control
+    /bin/chown -R load-remote /persistent/appdata/remote
+    /bin/chown -R load-ui /persistent/appdata/ui
+
+    # for confd
+    /bin/mkdir -p /persistent/config/confd-data/
+    /bin/chown -R confd:daemon /persistent/config/confd-data
+    /bin/chmod -R 700 /persistent/config/confd-data
+
+    # global permissions
+    /bin/chgrp -R load /persistent/appdata
+    /bin/chgrp -R load /persistent/config
 
     # when done, unmount to force to sync to disk
     /bin/umount /persistent
