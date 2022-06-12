@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <cbor.h>
 #include <event2/event.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
@@ -320,6 +321,16 @@ void RpcServer::handleClientEvent(struct bufferevent *ev, const size_t flags) {
 }
 
 /**
+ * @brief Terminate a client connection
+ *
+ * Aborts the connection to the client, releasing all its resources. This is usually done in
+ * response to an error of some sort.
+ */
+void RpcServer::abortClient(struct bufferevent *ev) {
+    this->clients.erase(ev);
+}
+
+/**
  * @brief Process a request to the config endpoint
  *
  * Requests here are simple CBOR serialized get/set messages to which we'll send a single response;
@@ -335,7 +346,22 @@ void RpcServer::doCfgQuery(std::span<const std::byte> packet, std::shared_ptr<Cl
         throw std::runtime_error("payload is required for kConfigQuery");
     }
 
-    // TODO: decode
+    // create CBOR decoder for message
+    auto payload = packet.subspan(offsetof(struct rpc_header, payload));
+    struct cbor_load_result result{};
+
+    auto item = cbor_load(reinterpret_cast<const cbor_data>(payload.data()), payload.size(),
+            &result);
+    if(result.error.code != CBOR_ERR_NONE) {
+        throw std::runtime_error(fmt::format("cbor_load failed: {} (at ${:x})", result.error.code,
+                    result.error.position));
+    }
+
+    // extract the config key
+
+    // perform operation (set if the `value` key exists)
+
+    // clean up
 }
 
 
@@ -378,12 +404,14 @@ RpcServer::Client::Client(RpcServer *server, const int fd) : socket(fd) {
             reinterpret_cast<RpcServer *>(ctx)->handleClientRead(bev);
         } catch(const std::exception &e) {
             PLOG_ERROR << "Failed to handle client read: " << e.what();
+            reinterpret_cast<RpcServer *>(ctx)->abortClient(bev);
         }
     }, nullptr, [](auto bev, auto what, auto ctx) {
         try {
             reinterpret_cast<RpcServer *>(ctx)->handleClientEvent(bev, what);
         } catch(const std::exception &e) {
             PLOG_ERROR << "Failed to handle client event: " << e.what();
+            reinterpret_cast<RpcServer *>(ctx)->abortClient(bev);
         }
     }, server);
 

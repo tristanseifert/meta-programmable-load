@@ -60,6 +60,7 @@ class RpcServer {
         void acceptClient();
         void handleClientRead(struct bufferevent *);
         void handleClientEvent(struct bufferevent *, const size_t);
+        void abortClient(struct bufferevent *);
 
         void handleTermination();
 

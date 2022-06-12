@@ -63,11 +63,11 @@ set_target_properties(daemon PROPERTIES OUTPUT_NAME confd)
 
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/daemon)
-target_link_libraries(daemon PRIVATE SQLite::SQLite3 rpc-helper plog::plog fmt::fmt SQLiteCpp
+target_link_libraries(daemon PRIVATE SQLite::SQLite3 plog::plog fmt::fmt SQLiteCpp
     tomlplusplus::tomlplusplus)
 
-target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS})
-target_link_libraries(daemon PRIVATE ${PKG_LIBEVENT_LIBRARIES})
+target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS})
+target_link_libraries(daemon PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES})
 
 INSTALL(TARGETS daemon RUNTIME DESTINATION /usr/sbin)
 
@@ -80,23 +80,35 @@ if(UNIX AND NOT APPLE)
 endif()
 
 ###############
-# RPC helper library
-#
-# Contains stubs for serializing and deserializing messages; consumed internally by the daemon and
-# the shared config query library.
-add_library(rpc-helper STATIC
-    src/rpc/deserialize.cpp
-    src/rpc/serialize.cpp
-)
-
-target_include_directories(rpc-helper PRIVATE ${PKG_LIBCBOR_INCLUDE_DIRS})
-target_link_libraries(rpc-helper PRIVATE ${PKG_LIBCBOR_LIBRARIES})
-target_include_directories(rpc-helper PRIVATE src/rpc)
-target_include_directories(rpc-helper PUBLIC include/rpc)
-
-###############
 # User library
 #
 # Provides an interface to query and update the configuration from applications with a simple C-
 # style interface.
+add_library(libconfd SHARED
+    src/lib/connection.cpp
+    src/lib/query.cpp
+)
+set_target_properties(libconfd PROPERTIES OUTPUT_NAME confd)
+set_target_properties(libconfd PROPERTIES PUBLIC_HEADER ${CMAKE_CURRENT_LIST_DIR}/include/lib/confd.h)
+set_target_properties(libconfd PROPERTIES VERSION ${PROJECT_VERSION})
+set_target_properties(libconfd PROPERTIES SOVERSION 1)
 
+target_include_directories(libconfd PUBLIC include/lib)
+target_include_directories(libconfd PRIVATE include/rpc ${PKG_LIBCBOR_INCLUDE_DIRS})
+target_link_libraries(libconfd PRIVATE ${PKG_LIBCBOR_LIBRARIES})
+
+INSTALL(TARGETS libconfd LIBRARY
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/confd)
+
+###############
+# Utility to manipulate configuration
+#
+# This is a small command line utility to manipulate the config database. It allows reading and
+# setting single keys.
+add_executable(util
+    src/util/main.cpp
+)
+set_target_properties(util PROPERTIES OUTPUT_NAME confdutil)
+target_link_libraries(util PRIVATE libconfd)
+
+INSTALL(TARGETS util RUNTIME DESTINATION /usr/bin)
