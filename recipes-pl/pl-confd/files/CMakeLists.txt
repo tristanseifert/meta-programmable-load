@@ -40,6 +40,7 @@ link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
 # Remote dependencies
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
 
 # option(SQLITECPP_INTERNAL_SQLITE "Add the internal SQLite3 source to the project." ON CACHE)
 set(SQLITECPP_INTERNAL_SQLITE OFF CACHE BOOL "")
@@ -62,7 +63,7 @@ set_target_properties(daemon PROPERTIES OUTPUT_NAME confd)
 
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/daemon)
-target_link_libraries(daemon PRIVATE SQLite::SQLite3 rpc-helper plog::plog SQLiteCpp
+target_link_libraries(daemon PRIVATE SQLite::SQLite3 rpc-helper plog::plog fmt::fmt SQLiteCpp
     tomlplusplus::tomlplusplus)
 
 target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS})

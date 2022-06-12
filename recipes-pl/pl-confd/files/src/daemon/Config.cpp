@@ -5,6 +5,7 @@
 #include <cerrno>
 #include <stdexcept>
 
+#include <fmt/core.h>
 #include <plog/Log.h>
 #include <toml++/toml.h>
 
@@ -73,7 +74,7 @@ void Config::ReadStorage(const toml::table &tbl) {
     gStoragePath = dir;
 
     if(!std::filesystem::is_directory(gStoragePath)) {
-        throw std::runtime_error("invalid storage directory");
+        throw std::runtime_error(fmt::format("invalid storage directory '{}'", gStoragePath.string()));
     }
 
     // append the db name to it

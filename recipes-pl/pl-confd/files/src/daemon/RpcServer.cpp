@@ -3,13 +3,17 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <event2/event.h>
+#include <event2/buffer.h>
+#include <event2/bufferevent.h>
 
 #include <atomic>
 #include <cerrno>
 #include <cstring>
 #include <system_error>
 
+#include <fmt/core.h>
 #include <plog/Log.h>
+#include <rpc/types.h>
 
 #include "Config.h"
 #include "RpcServer.h"
@@ -151,7 +155,11 @@ void RpcServer::initSignalEvents() {
 void RpcServer::initSocketEvent() {
     this->listenEvent = event_new(this->evbase, this->listenSock, (EV_READ | EV_PERSIST),
             [](auto fd, auto what, auto ctx) {
-        reinterpret_cast<RpcServer *>(ctx)->acceptClient();
+        try {
+            reinterpret_cast<RpcServer *>(ctx)->acceptClient();
+        } catch(const std::exception &e) {
+            PLOG_ERROR << "failed to accept client: " << e.what();
+        }
     }, this);
     if(!this->listenEvent) {
         throw std::runtime_error("failed to allocate listen event");
@@ -184,6 +192,7 @@ RpcServer::~RpcServer() {
 
     // close all clients
     PLOG_DEBUG << "Closing client connections";
+    this->clients.clear();
 
     // release events
     event_free(this->listenEvent);
@@ -215,6 +224,123 @@ void RpcServer::run() {
 
 
 /**
+ * @brief Accept a single waiting client
+ *
+ * Accepts one client on the listening socket, and sets up a connection struct for it.
+ */
+void RpcServer::acceptClient() {
+    // accept client
+    int fd = accept(this->listenSock, nullptr, nullptr);
+    if(fd == -1) {
+        throw std::system_error(errno, std::generic_category(), "accept");
+    }
+
+    // convert socket to non-blocking
+    int err = evutil_make_socket_nonblocking(fd);
+    if(err == -1) {
+        throw std::system_error(errno, std::generic_category(), "evutil_make_socket_nonblocking");
+    }
+
+    // set up our bookkeeping for it and add it to event loop
+    auto cl = std::make_shared<Client>(this, fd);
+    this->clients.emplace(cl->event, std::move(cl));
+
+    PLOG_DEBUG << "Accepted client " << fd << " (" << this->clients.size() << " total)";
+}
+
+/**
+ * @brief A client connection is ready to read
+ *
+ * Reads data from the given client connection.
+ */
+void RpcServer::handleClientRead(struct bufferevent *ev) {
+    // get client struct
+    auto &client = this->clients.at(ev);
+
+    // read client data
+    /**
+     * TODO: rework this so data is buffered over time in the client receive buffer, rather than
+     * being overwritten each time, in case clients decide to do partial writes down the line!
+     */
+    auto buf = bufferevent_get_input(ev);
+    const size_t pending = evbuffer_get_length(buf);
+
+    client->receiveBuf.resize(pending);
+    int read = evbuffer_remove(buf, static_cast<void *>(client->receiveBuf.data()), pending);
+
+    if(read == -1) {
+        throw std::runtime_error("failed to drain client read buffer");
+    }
+
+    // read the header
+    if(read < sizeof(struct rpc_header)) {
+        // we haven't yet read enough bytes; this should never happen, so abort
+        throw std::runtime_error(fmt::format("read too few bytes ({}) from client", read));
+    }
+
+    const auto hdr = reinterpret_cast<const struct rpc_header *>(client->receiveBuf.data());
+
+    if(hdr->version != kRpcVersionLatest) {
+        throw std::runtime_error(fmt::format("unsupported rpc version ${:04x}", hdr->version));
+    } else if(hdr->length < sizeof(struct rpc_header)) {
+        throw std::runtime_error(fmt::format("invalid header length ({})", hdr->length));
+    }
+
+    // invoke endpoint handler
+    switch(hdr->endpoint) {
+        case kConfigQuery:
+            this->doCfgQuery(client->receiveBuf, client);
+            break;
+
+        default:
+            throw std::runtime_error(fmt::format("unknown rpc endpoint ${:02x}", hdr->endpoint));
+    }
+}
+
+/**
+ * @brief A client connection event occurred
+ *
+ * This handles errors on read/write, as well as the connection being closed. In all cases, we'll
+ * proceed by releasing this connection, which will close it if not already done.
+ */
+void RpcServer::handleClientEvent(struct bufferevent *ev, const size_t flags) {
+    auto &client = this->clients.at(ev);
+
+    // connection closed
+    if(flags & BEV_EVENT_EOF) {
+        PLOG_DEBUG << "Client " << client->socket << " closed connection";
+    }
+    // IO error
+    else if(flags & BEV_EVENT_ERROR) {
+        PLOG_DEBUG << "Client " << client->socket << " error: flags=" << flags;
+    }
+
+    // in either case, remove the client struct
+    this->clients.erase(ev);
+}
+
+/**
+ * @brief Process a request to the config endpoint
+ *
+ * Requests here are simple CBOR serialized get/set messages to which we'll send a single response;
+ * we use the encode/decode helpers in rpc-helper static library for this.
+ *
+ * @param packet Memory region containing the full RPC packet, starting at the header
+ * @param client Pointer to client this request originated on
+*/
+void RpcServer::doCfgQuery(std::span<const std::byte> packet, std::shared_ptr<Client> &client) {
+    // validate header and the payload size
+    const auto hdr = reinterpret_cast<const struct rpc_header *>(packet.data());
+    if(hdr->length <= sizeof(struct rpc_header)) {
+        throw std::runtime_error("payload is required for kConfigQuery");
+    }
+
+    // TODO: decode
+}
+
+
+
+/**
  * @brief Handle a signal that indicates the process should terminate
  */
 void RpcServer::handleTermination() {
@@ -224,11 +350,61 @@ void RpcServer::handleTermination() {
     event_base_loopbreak(this->evbase);
 }
 
+
+
 /**
- * @brief Accept a single waiting client
+ * @brief Create a new client data structure
  *
- * Accepts one client on the listening socket, and sets up a connection struct for it.
+ * Initialize a buffer event (used for event notifications, like the connection being closed; as
+ * well as when buffered data is available) for the client.
+ *
+ * @param server RPC server to which the client connected
+ * @param fd File descriptor for client (we take ownership of this)
  */
-void RpcServer::acceptClient() {
-    // TODO
+RpcServer::Client::Client(RpcServer *server, const int fd) : socket(fd) {
+    // create the event
+    this->event = bufferevent_socket_new(server->evbase, this->socket, 0);
+    if(!this->event) {
+        throw std::runtime_error("failed to create bufferevent");
+    }
+
+    // set watermark: don't invoke read callback til a full header has been read at least
+    bufferevent_setwatermark(this->event, EV_READ, sizeof(struct rpc_header),
+            EV_RATE_LIMIT_MAX);
+
+    // install callbacks
+    bufferevent_setcb(this->event, [](auto bev, auto ctx) {
+        try {
+            reinterpret_cast<RpcServer *>(ctx)->handleClientRead(bev);
+        } catch(const std::exception &e) {
+            PLOG_ERROR << "Failed to handle client read: " << e.what();
+        }
+    }, nullptr, [](auto bev, auto what, auto ctx) {
+        try {
+            reinterpret_cast<RpcServer *>(ctx)->handleClientEvent(bev, what);
+        } catch(const std::exception &e) {
+            PLOG_ERROR << "Failed to handle client event: " << e.what();
+        }
+    }, server);
+
+    // enable event for "client data available to read" events
+    int err = bufferevent_enable(this->event, EV_READ);
+    if(err == -1) {
+        throw std::runtime_error("failed to enable bufferevent");
+    }
+}
+
+/**
+ * @brief Ensure all client resources are released.
+ *
+ * This closes the client socket, as well as releasing the libevent resources.
+ */
+RpcServer::Client::~Client() {
+    if(this->socket != -1) {
+        close(this->socket);
+    }
+
+    if(this->event) {
+        bufferevent_free(this->event);
+    }
 }

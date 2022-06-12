@@ -5,6 +5,9 @@
 
 #include <array>
 #include <cstddef>
+#include <memory>
+#include <span>
+#include <unordered_map>
 
 /**
  * @brief Remote access interface
@@ -28,6 +31,25 @@ class RpcServer {
         void run();
 
     private:
+        /**
+         * @brief Information for a single connected client
+         *
+         * This struct encapsulates all information about a connected client, including the events
+         * used to wait for activity on the connection.
+         */
+        struct Client {
+            /// Underlying client file descriptor
+            int socket{-1};
+            /// Socket buffer event (used for data ready to read + events)
+            struct bufferevent *event{nullptr};
+            /// message receive buffer
+            std::vector<std::byte> receiveBuf;
+
+            Client(RpcServer *, const int);
+            ~Client();
+        };
+
+    private:
         void initSocket();
 
         void initEventLoop();
@@ -35,9 +57,13 @@ class RpcServer {
         void initSignalEvents();
         void initSocketEvent();
 
+        void acceptClient();
+        void handleClientRead(struct bufferevent *);
+        void handleClientEvent(struct bufferevent *, const size_t);
+
         void handleTermination();
 
-        void acceptClient();
+        void doCfgQuery(std::span<const std::byte>, std::shared_ptr<Client> &);
 
     private:
         /// Maximum amount of clients that may be waiting to be accepted at once
@@ -58,6 +84,9 @@ class RpcServer {
 
         /// libevent main loop
         struct event_base *evbase{nullptr};
+
+        /// connected clients
+        std::unordered_map<struct bufferevent *, std::shared_ptr<Client>> clients;
 };
 
 #endif
