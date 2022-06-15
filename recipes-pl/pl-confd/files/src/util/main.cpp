@@ -20,6 +20,7 @@ int main(const int argc, char * const *argv) {
     int err;
     std::string socketPath{"/var/log/confd.sock"};
     std::string keyName;
+    bool read{false};
 
     // parse command line
     int c;
@@ -30,6 +31,7 @@ int main(const int argc, char * const *argv) {
             {"socket",                  required_argument, 0, 0},
             // name of key to read
             {"read",                    required_argument, 0, 0},
+            // TODO: add value type flag
             {nullptr,                   0, 0, 0},
         };
 
@@ -46,6 +48,7 @@ int main(const int argc, char * const *argv) {
             }
             else if(index == 1) {
                 keyName = optarg;
+                read = true;
             }
         }
     }
@@ -63,6 +66,15 @@ int main(const int argc, char * const *argv) {
     }
 
     // perform request
+    if(read) {
+        char outStr[512];
+        err = confd_get_string(keyName.c_str(), outStr, sizeof(outStr));
+
+        if(err) {
+            std::cerr << "failed to read key: " << err << std::endl;
+            return -1;
+        }
+    }
 
     // clean up
     confd_close();

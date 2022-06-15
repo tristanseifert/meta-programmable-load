@@ -94,7 +94,7 @@ set_target_properties(libconfd PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(libconfd PROPERTIES SOVERSION 1)
 
 target_include_directories(libconfd PUBLIC include/lib)
-target_include_directories(libconfd PRIVATE include/rpc ${PKG_LIBCBOR_INCLUDE_DIRS})
+target_include_directories(libconfd PRIVATE include ${PKG_LIBCBOR_INCLUDE_DIRS})
 target_link_libraries(libconfd PRIVATE ${PKG_LIBCBOR_LIBRARIES})
 
 INSTALL(TARGETS libconfd LIBRARY
