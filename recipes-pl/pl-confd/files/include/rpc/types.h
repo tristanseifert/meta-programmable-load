@@ -36,8 +36,10 @@ struct rpc_header {
  * @brief RPC message endpoints
  */
 enum rpc_endpoint {
-    /// Access the configuration database
+    /// Access the configuration database (read)
     kConfigQuery                        = 0x01,
+    /// Update the configuration database (write)
+    kConfigUpdate                       = 0x02,
 };
 
 #endif

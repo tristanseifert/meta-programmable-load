@@ -333,13 +333,15 @@ void RpcServer::abortClient(struct bufferevent *ev) {
 /**
  * @brief Process a request to the config endpoint
  *
- * Requests here are simple CBOR serialized get/set messages to which we'll send a single response;
+ * Requests here are simple CBOR serialized get messages to which we'll send a single response;
  * we use the encode/decode helpers in rpc-helper static library for this.
  *
  * @param packet Memory region containing the full RPC packet, starting at the header
  * @param client Pointer to client this request originated on
 */
 void RpcServer::doCfgQuery(std::span<const std::byte> packet, std::shared_ptr<Client> &client) {
+    std::string keyName;
+
     // validate header and the payload size
     const auto hdr = reinterpret_cast<const struct rpc_header *>(packet.data());
     if(hdr->length <= sizeof(struct rpc_header)) {
@@ -357,11 +359,66 @@ void RpcServer::doCfgQuery(std::span<const std::byte> packet, std::shared_ptr<Cl
                     result.error.position));
     }
 
-    // extract the config key
+    try {
+        // validate map
+        if(!cbor_isa_map(item)) {
+            throw std::runtime_error("invalid payload: expected map");
+        }
 
-    // perform operation (set if the `value` key exists)
+        const auto numKeys = cbor_map_size(item);
 
-    // clean up
+        if(!numKeys) {
+            throw std::runtime_error("invalid payload: map has no keys");
+        }
+
+        // iterate over all keys to extract the key name and value
+        auto keys = cbor_map_handle(item);
+
+        for(size_t i = 0; i < numKeys; i++) {
+            auto &pair = keys[i];
+
+            // validate key type: must be a string
+            if(!cbor_isa_string(pair.key)) {
+                throw std::runtime_error("invalid map key (expected string)");
+            }
+
+            const auto keyStr = reinterpret_cast<const char *>(cbor_string_handle(pair.key));
+            const auto keyStrLen = cbor_string_length(pair.key);
+
+            if(!keyStr) {
+                throw std::runtime_error("failed to get map key string");
+            }
+
+            // check if it's a known key value
+            if(!strncmp(keyStr, "key", keyStrLen)) {
+                if(!cbor_isa_string(pair.value)) {
+                    throw std::runtime_error("invalid type for `key` (expected string)");
+                }
+                auto handle = cbor_string_handle(pair.value);
+                if(!handle) {
+                    throw std::runtime_error("failed to get key name string");
+                }
+
+                keyName = reinterpret_cast<const char *>(handle);
+            }
+            // ignore other keys for forward compat
+            else {
+                PLOG_WARNING << "ignoring unknown config request key '" << keyStr << "'";
+            }
+        }
+    } catch(const std::exception &e) {
+        cbor_decref(&item);
+        throw;
+    }
+
+    cbor_decref(&item);
+
+    // TODO: perform request
+    if(keyName.empty()) {
+        throw std::runtime_error("failed to get key name (wtf)");
+    }
+
+    PLOG_ERROR << "TODO: request for key '" << keyName << "'";
 }
 
 
