@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <memory>
 #include <span>
+#include <string>
 #include <unordered_map>
 
 /**
@@ -64,7 +65,12 @@ class RpcServer {
 
         void handleTermination();
 
-        void doCfgQuery(std::span<const std::byte>, std::shared_ptr<Client> &);
+        void doCfgQuery(std::span<const std::byte>, struct cbor_item_t *,
+                std::shared_ptr<Client> &);
+        void doCfgUpdate(std::span<const std::byte>, struct cbor_item_t *,
+                std::shared_ptr<Client> &);
+
+        static std::string ExtractKeyName(struct cbor_item_t *);
 
     private:
         /// Maximum amount of clients that may be waiting to be accepted at once

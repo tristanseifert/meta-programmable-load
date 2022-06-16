@@ -11,6 +11,7 @@
 #include <cerrno>
 #include <cstring>
 #include <system_error>
+#include <variant>
 
 #include <fmt/core.h>
 #include <plog/Log.h>
@@ -284,22 +285,50 @@ void RpcServer::handleClientRead(struct bufferevent *ev) {
     if(hdr->version != kRpcVersionLatest) {
         throw std::runtime_error(fmt::format("unsupported rpc version ${:04x}", hdr->version));
     } else if(hdr->length < sizeof(struct rpc_header)) {
-        throw std::runtime_error(fmt::format("invalid header length ({})", hdr->length));
+        throw std::runtime_error(fmt::format("invalid header length ({}, too short)",
+                    hdr->length));
+    }
+
+    const auto payloadLen = hdr->length - sizeof(struct rpc_header);
+    if(payloadLen > client->receiveBuf.size()) {
+        throw std::runtime_error(fmt::format("invalid header length ({}, too long)",
+                    hdr->length));
+    }
+
+    // decode as CBOR, if desired
+    struct cbor_load_result result{};
+
+    auto item = cbor_load(reinterpret_cast<const cbor_data>(hdr->payload), payloadLen,
+            &result);
+    if(result.error.code != CBOR_ERR_NONE) {
+        throw std::runtime_error(fmt::format("cbor_load failed: {} (at ${:x})", result.error.code,
+                    result.error.position));
     }
 
     // invoke endpoint handler
-    switch(hdr->endpoint) {
-        case kConfigQuery:
-            this->doCfgQuery(client->receiveBuf, client);
-            break;
+    try {
+        switch(hdr->endpoint) {
+            case kConfigQuery:
+                this->doCfgQuery(client->receiveBuf, item, client);
+                break;
+            case kConfigUpdate:
+                this->doCfgUpdate(client->receiveBuf, item, client);
+                break;
 
-        default:
-            throw std::runtime_error(fmt::format("unknown rpc endpoint ${:02x}", hdr->endpoint));
+            default:
+                throw std::runtime_error(fmt::format("unknown rpc endpoint ${:02x}", hdr->endpoint));
+        }
+    } catch(const std::exception &e) {
+        cbor_decref(&item);
+        throw;
     }
+
+    // clean up
+    cbor_decref(&item);
 }
 
 /**
- * @brief A client connection event occurred
+ * @brief A client connection event ocurred
  *
  * This handles errors on read/write, as well as the connection being closed. In all cases, we'll
  * proceed by releasing this connection, which will close it if not already done.
@@ -331,89 +360,85 @@ void RpcServer::abortClient(struct bufferevent *ev) {
 }
 
 /**
- * @brief Process a request to the config endpoint
+ * @brief Extract the property key name from a get/set request
+ *
+ * Given the root of a CBOR message, extract the property key (this is a string under the root
+ * item with the string key `key`) from it.
+ *
+ * @param item Map containing the request (usually the root of the request)
+ *
+ * @return Property key name the query pertains to
+ *
+ * @remark The input item _must_ be a map.
+ */
+std::string RpcServer::ExtractKeyName(struct cbor_item_t *item) {
+    std::string keyName;
+
+    // validate map
+    const auto numKeys = cbor_map_size(item);
+
+    if(!numKeys) {
+        throw std::runtime_error("invalid payload: map has no keys");
+    }
+
+    // iterate over all keys to extract the key name and value
+    auto keys = cbor_map_handle(item);
+
+    for(size_t i = 0; i < numKeys; i++) {
+        auto &pair = keys[i];
+
+        // validate key type: must be a string
+        if(!cbor_isa_string(pair.key)) {
+            throw std::runtime_error("invalid map key type (expected string)");
+        }
+
+        const auto keyStr = reinterpret_cast<const char *>(cbor_string_handle(pair.key));
+        const auto keyStrLen = cbor_string_length(pair.key);
+
+        if(!keyStr) {
+            throw std::runtime_error("failed to get map key string");
+        }
+
+        // check if it's a known key value
+        if(!strncmp(keyStr, "key", keyStrLen)) {
+            if(!cbor_isa_string(pair.value)) {
+                throw std::runtime_error("invalid type for `key` (expected string)");
+            } else if(!cbor_string_is_definite(pair.value)) {
+                throw std::runtime_error("indefinite strings not supported");
+            }
+
+            auto handle = cbor_string_handle(pair.value);
+            if(!handle) {
+                throw std::runtime_error("failed to get key name string");
+            }
+
+            keyName = reinterpret_cast<const char *>(handle);
+        }
+        // ignore other keys for forward compat
+    }
+
+    return keyName;
+}
+
+
+/**
+ * @brief Process a query request to the config endpoint
  *
  * Requests here are simple CBOR serialized get messages to which we'll send a single response;
  * we use the encode/decode helpers in rpc-helper static library for this.
  *
  * @param packet Memory region containing the full RPC packet, starting at the header
+ * @param item Root CBOR item in payload of message
  * @param client Pointer to client this request originated on
 */
-void RpcServer::doCfgQuery(std::span<const std::byte> packet, std::shared_ptr<Client> &client) {
-    std::string keyName;
-
-    // validate header and the payload size
-    const auto hdr = reinterpret_cast<const struct rpc_header *>(packet.data());
-    if(hdr->length <= sizeof(struct rpc_header)) {
-        throw std::runtime_error("payload is required for kConfigQuery");
+void RpcServer::doCfgQuery(std::span<const std::byte> packet, cbor_item_t *item,
+        std::shared_ptr<Client> &client) {
+    // validate inputs
+    if(!cbor_isa_map(item)) {
+        throw std::invalid_argument("invalid payload: expected map");
     }
 
-    // create CBOR decoder for message
-    auto payload = packet.subspan(offsetof(struct rpc_header, payload));
-    struct cbor_load_result result{};
-
-    auto item = cbor_load(reinterpret_cast<const cbor_data>(payload.data()), payload.size(),
-            &result);
-    if(result.error.code != CBOR_ERR_NONE) {
-        throw std::runtime_error(fmt::format("cbor_load failed: {} (at ${:x})", result.error.code,
-                    result.error.position));
-    }
-
-    try {
-        // validate map
-        if(!cbor_isa_map(item)) {
-            throw std::runtime_error("invalid payload: expected map");
-        }
-
-        const auto numKeys = cbor_map_size(item);
-
-        if(!numKeys) {
-            throw std::runtime_error("invalid payload: map has no keys");
-        }
-
-        // iterate over all keys to extract the key name and value
-        auto keys = cbor_map_handle(item);
-
-        for(size_t i = 0; i < numKeys; i++) {
-            auto &pair = keys[i];
-
-            // validate key type: must be a string
-            if(!cbor_isa_string(pair.key)) {
-                throw std::runtime_error("invalid map key (expected string)");
-            }
-
-            const auto keyStr = reinterpret_cast<const char *>(cbor_string_handle(pair.key));
-            const auto keyStrLen = cbor_string_length(pair.key);
-
-            if(!keyStr) {
-                throw std::runtime_error("failed to get map key string");
-            }
-
-            // check if it's a known key value
-            if(!strncmp(keyStr, "key", keyStrLen)) {
-                if(!cbor_isa_string(pair.value)) {
-                    throw std::runtime_error("invalid type for `key` (expected string)");
-                }
-                auto handle = cbor_string_handle(pair.value);
-                if(!handle) {
-                    throw std::runtime_error("failed to get key name string");
-                }
-
-                keyName = reinterpret_cast<const char *>(handle);
-            }
-            // ignore other keys for forward compat
-            else {
-                PLOG_WARNING << "ignoring unknown config request key '" << keyStr << "'";
-            }
-        }
-    } catch(const std::exception &e) {
-        cbor_decref(&item);
-        throw;
-    }
-
-    cbor_decref(&item);
-
-    // TODO: perform request
+    const auto keyName = ExtractKeyName(item);
     if(keyName.empty()) {
         throw std::runtime_error("failed to get key name (wtf)");
     }
@@ -421,6 +446,104 @@ void RpcServer::doCfgQuery(std::span<const std::byte> packet, std::shared_ptr<Cl
     PLOG_ERROR << "TODO: request for key '" << keyName << "'";
 }
 
+/**
+ * @brief Process a request to update a config key
+ *
+ * This request should contain both a `key` and a `value` entry, where the latter is either an
+ * UTF-8 string, byte string (blob), an integer, or floating point value.
+ *
+ * @remark If the value is specified as a boolean, the value is coerced to an unsigned integer
+ *         (such that false = zero, true = an implementation-defined non-zero value)
+ *
+ * @param packet Memory region containing the full RPC packet, starting at the header
+ * @param item Root CBOR item in payload of message
+ * @param client Pointer to client this request originated on
+ */
+void RpcServer::doCfgUpdate(std::span<const std::byte> packet, cbor_item_t *item,
+        std::shared_ptr<Client> &client) {
+    std::variant<std::monostate, std::string, std::vector<std::byte>,
+        uint64_t, double, bool> value;
+
+    // validate inputs
+    if(!cbor_isa_map(item)) {
+        throw std::invalid_argument("invalid payload: expected map");
+    }
+
+    // get key name
+    const auto keyName = ExtractKeyName(item);
+    if(keyName.empty()) {
+        throw std::runtime_error("failed to get key name (wtf)");
+    }
+
+    /*
+     * Get the value of the key
+     *
+     * This checks for the "value" key in the input map, and extracts its value if it matches one
+     * of the desired/supported types. Note that we skip some validation here on the map (namely
+     * whether there's more than one key) since that's already been done by `ExtractKeyName`
+     */
+    const auto numKeys = cbor_map_size(item);
+    auto keys = cbor_map_handle(item);
+
+    for(size_t i = 0; i < numKeys; i++) {
+        auto &pair = keys[i];
+
+        // validate key type: must be a string
+        if(!cbor_isa_string(pair.key)) {
+            throw std::runtime_error("invalid map key type (expected string)");
+        }
+
+        const auto keyStr = reinterpret_cast<const char *>(cbor_string_handle(pair.key));
+        const auto keyStrLen = cbor_string_length(pair.key);
+
+        if(!keyStr) {
+            throw std::runtime_error("failed to get map key string");
+        }
+
+        // if it's not the `value` key, bail
+        if(strncmp(keyStr, "value", keyStrLen) != 0) {
+            continue;
+        }
+
+        // figure out its type
+        if(cbor_isa_string(pair.value)) { // UTF-8 string
+            if(!cbor_string_is_definite(pair.value)) {
+                throw std::runtime_error("indefinite strings not supported");
+            }
+            value = reinterpret_cast<const char *>(cbor_string_handle(pair.value));
+        } else if(cbor_isa_bytestring(pair.value)) { // blob
+            // reject indefinite blobs
+            if(!cbor_bytestring_is_definite(pair.value)) {
+                throw std::runtime_error("indefinite bytestrings not supported");
+            }
+
+            const auto blobNumBytes = cbor_bytestring_length(pair.value);
+            const auto blobData = cbor_bytestring_handle(pair.value);
+
+            // copy the blob out
+            std::vector<std::byte> buf;
+            buf.resize(blobNumBytes);
+
+            memcpy(buf.data(), blobData, blobNumBytes);
+            value = buf;
+        } else if(cbor_isa_uint(pair.value)) { // unsigned integer
+            // TODO: extend narrower types
+            value = cbor_get_uint64(pair.value);
+        } else if(cbor_isa_float_ctrl(pair.value)) { // float or bool
+            // probably a bool?
+            if(cbor_float_ctrl_is_ctrl(pair.value)) {
+                value = cbor_get_bool(pair.value);
+            }
+            // a float value: read it out as a double
+            else {
+                value = cbor_float_get_float(pair.value);
+            }
+        }
+    }
+
+    // perform update
+    PLOG_ERROR << "TODO: update request for key '" << keyName << "'";
+}
 
 
 /**
