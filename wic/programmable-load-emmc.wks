@@ -1,0 +1,16 @@
+# short-description: Create eMMC image for programmable load
+# long-description: Creates a partitioned eMMC image for programmable load, to be flashed into
+# the eMMC on the board.
+
+### bootloader partitions
+part ssbl --source rawcopy --sourceparams="file=u-boot.img" --ondisk mmcblk --align 1 --size 2M --part-name ssbl
+
+### system data partitions
+part / --source rootfs --ondisk mmcblk --fstype=erofs --mkfs-extraopts="-zlz4hc" --align 128 --size 256M --active --part-name rootfs
+
+### user data partitions
+# reserve space for an F2FS user data partition
+# part /userdata --source empty --ondisk mmcblk --align 1024 --size 4M --label userdata --part-name userdata
+
+bootloader --ptable gpt
+
