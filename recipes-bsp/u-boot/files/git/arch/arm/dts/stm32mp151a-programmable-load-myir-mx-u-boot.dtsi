@@ -183,6 +183,21 @@
     secure-status = "okay";
 };
 
+
+/*
+ * This interface isn't actually used; we just define it here so that U-boot will work. Since their
+ * driver model cannot support "holes" in device numbers, and the eMMC is on device 1… yeah.
+ */
+&sdmmc1{
+    u-boot,dm-pre-reloc;
+    u-boot,dm-spl;
+    status = "okay";
+    disable-wp;
+    st,neg-edge;
+    bus-width = <4>;
+    vmmc-supply = <&vdd>;
+};
+
 &sdmmc2{
 	u-boot,dm-pre-reloc;
 

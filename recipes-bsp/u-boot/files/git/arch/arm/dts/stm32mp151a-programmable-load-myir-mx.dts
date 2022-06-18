@@ -1135,8 +1135,8 @@
         linux,axis = <0>; // REL_X
 
         // set up the GPIOs
-        pinctrl-names = "default";
-        pinctrl-0 = <&front_encoder_pins>;
+        //pinctrl-names = "default";
+        //pinctrl-0 = <&front_encoder_pins>;
 
         // specify GPIOs connected to encoder ("A" and "B" lines)
         gpios = <&gpioa 4 0>, <&gpioa 6 0>;
@@ -1167,8 +1167,8 @@
         status = "okay";
 
         // configure the GPIOs
-        pinctrl-names = "default";
-        pinctrl-0 = <&status_led_pins>;
+        //pinctrl-names = "default";
+        //pinctrl-0 = <&status_led_pins>;
 
         // bi-color on-board A7 status LED
         ext-status {
@@ -1372,6 +1372,7 @@
         spi-max-frequency = <10000000>;
 
         // TODO: what is the `compatible` for this?
+        compatible = "spidev";
     };
 };
 
