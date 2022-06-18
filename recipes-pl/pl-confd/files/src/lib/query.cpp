@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <cbor.h>
 
+#include <cstring>
 #include <system_error>
 #include <vector>
 
