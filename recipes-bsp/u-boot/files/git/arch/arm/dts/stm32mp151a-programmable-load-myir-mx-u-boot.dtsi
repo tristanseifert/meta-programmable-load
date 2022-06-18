@@ -1,0 +1,205 @@
+/* SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause*/
+/*
+ * Copyright (C) 2022, STMicroelectronics - All Rights Reserved
+ * Author: STM32CubeMX code generation for STMicroelectronics.
+ */
+
+/* For more information on Device Tree configuration, please refer to
+ * https://wiki.st.com/stm32mpu/wiki/Category:Device_tree_configuration
+ */
+
+#include <dt-bindings/clock/stm32mp1-clksrc.h>
+#include "stm32mp15-mx.dtsi"
+
+#include "stm32mp15-u-boot.dtsi"
+#include "stm32mp15-ddr.dtsi"
+
+/* USER CODE BEGIN includes */
+/* USER CODE END includes */
+
+/ {
+
+    /* USER CODE BEGIN root */
+    config {
+        u-boot,mmc-env-partition = "ssbl";
+    };
+    /* USER CODE END root */
+
+    clocks {
+        /* USER CODE BEGIN clocks */
+        /* USER CODE END clocks */
+
+        clk_lsi: clk-lsi {
+
+            /* USER CODE BEGIN clk_lsi */
+            /* USER CODE END clk_lsi */
+        };
+        clk_hsi: clk-hsi {
+
+            /* USER CODE BEGIN clk_hsi */
+            /* USER CODE END clk_hsi */
+        };
+        clk_csi: clk-csi {
+            status = "disabled";
+
+            /* USER CODE BEGIN clk_csi */
+            /* USER CODE END clk_csi */
+        };
+        clk_lse: clk-lse {
+            st,css;
+
+            /* USER CODE BEGIN clk_lse */
+            /* USER CODE END clk_lse */
+        };
+        clk_hse: clk-hse {
+            st,css;
+
+            /* USER CODE BEGIN clk_hse */
+            st,digbypass;
+            /* USER CODE END clk_hse */
+        };
+    };
+
+}; /*root*/
+
+&rcc{
+	u-boot,dm-pre-reloc;
+	st,clksrc = <
+		CLK_MPU_PLL1P
+		CLK_AXI_PLL2P
+		CLK_MCU_PLL3P
+		CLK_PLL12_HSE
+		CLK_PLL3_HSE
+		CLK_PLL4_HSE
+		CLK_RTC_LSI
+		CLK_MCO1_DISABLED
+		CLK_MCO2_DISABLED
+	>;
+	st,clkdiv = <
+		1 		/*MPU*/
+		0 		/*AXI*/
+		0 		/*MCU*/
+		1 		/*APB1*/
+		1 		/*APB2*/
+		1 		/*APB3*/
+		1 		/*APB4*/
+		2 		/*APB5*/
+		0 		/*RTC*/
+		0 		/*MCO1*/
+		0 		/*MCO2*/
+	>;
+	st,pkcs = <
+		CLK_CKPER_DISABLED
+		CLK_ETH_PLL4P
+		CLK_SDMMC12_PLL3R
+		CLK_STGEN_HSI
+		CLK_USBPHY_HSE
+		CLK_SPI2S1_DISABLED
+		CLK_SPI2S23_PLL4P
+		CLK_SPI45_PCLK2
+		CLK_SPI6_DISABLED
+		CLK_I2C46_PCLK5
+		CLK_SDMMC3_DISABLED
+		CLK_USBO_USBPHY
+		CLK_ADC_DISABLED
+		CLK_CEC_DISABLED
+		CLK_I2C12_PLL4R
+		CLK_I2C35_DISABLED
+		CLK_UART1_DISABLED
+		CLK_UART24_HSE
+		CLK_UART35_HSE
+		CLK_UART6_DISABLED
+		CLK_UART78_DISABLED
+		CLK_SPDIF_DISABLED
+		CLK_SAI1_DISABLED
+		CLK_SAI2_DISABLED
+		CLK_SAI3_DISABLED
+		CLK_SAI4_DISABLED
+		CLK_RNG1_PLL4R
+		CLK_RNG2_PLL4R
+		CLK_LPTIM1_DISABLED
+		CLK_LPTIM23_DISABLED
+		CLK_LPTIM45_DISABLED
+	>;
+	pll2:st,pll@1 {
+		compatible = "st,stm32mp1-pll";
+		reg = <1>;
+		cfg = < 2 65 1 1 0 PQR(1,0,1) >;
+		frac = < 0x1400 >;
+		u-boot,dm-pre-reloc;
+	};
+	pll3:st,pll@2 {
+		compatible = "st,stm32mp1-pll";
+		reg = <2>;
+		cfg = < 1 51 2 5 3 PQR(1,0,1) >;
+		frac = < 0x800 >;
+		u-boot,dm-pre-reloc;
+	};
+	pll4:st,pll@3 {
+		compatible = "st,stm32mp1-pll";
+		reg = <3>;
+		cfg = < 1 49 11 23 14 PQR(1,1,1) >;
+		u-boot,dm-pre-reloc;
+	};
+
+	/* USER CODE BEGIN rcc */
+	/* USER CODE END rcc */
+};
+
+&sdmmc2{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN sdmmc2 */
+        u-boot,dm-spl;
+	/* USER CODE END sdmmc2 */
+};
+
+&uart4{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN uart4 */
+	/* USER CODE END uart4 */
+};
+
+&usbotg_hs{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN usbotg_hs */
+        // force it into device mode
+        u-boot,force-b-session-valid;
+	/* USER CODE END usbotg_hs */
+};
+
+&usbphyc{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN usbphyc */
+	/* USER CODE END usbphyc */
+};
+
+&usbphyc_port0{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN usbphyc_port0 */
+	/* USER CODE END usbphyc_port0 */
+};
+
+&usbphyc_port1{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN usbphyc_port1 */
+	/* USER CODE END usbphyc_port1 */
+};
+
+/* USER CODE BEGIN addons */
+&sdmmc2_pins_mx {
+    u-boot,dm-spl;
+    pins1 {
+        u-boot,dm-spl;
+    };
+    pins2 {
+        u-boot,dm-spl;
+    };
+};
+/* USER CODE END addons */
+

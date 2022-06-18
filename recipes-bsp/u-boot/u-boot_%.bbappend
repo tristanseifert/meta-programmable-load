@@ -1,4 +1,4 @@
-FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 # custom version modifier
 UBOOT_LOCALVERSION = "-programmable-load"
@@ -14,5 +14,12 @@ UBOOT_EXTLINUX_KERNEL_IMAGE_default = "/boot/zImage-5.15.46"
 
 # patch to disable ADC in u-boot
 SRC_URI:append:stm32mp1 = " \
-	file://0002-stm32mp1-programmable-load.patch \
+    file://0002-stm32mp1-programmable-load.patch \
+    file://0003-programmable-load-dts.patch \
+    file://git/arch/arm/dts/stm32mp151a-programmable-load-myir-mx.dts \
+    file://git/arch/arm/dts/stm32mp151a-programmable-load-myir-mx-u-boot.dtsi \
+    file://git/arch/arm/dts/stm32mp15-mx.dtsi \
+    file://git/arch/arm/dts/stm32mp15xa.dtsi \
+    file://git/arch/arm/dts/stm32mp15-m4-srm.dtsi \
+    file://git/include/dt-bindings/pinctrl/stm32-pinfunc-2.h \
 "
