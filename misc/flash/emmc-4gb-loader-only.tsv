@@ -5,6 +5,7 @@ PD	0x04	fsbl1	Binary	mmc1	boot1	rootfs/u-boot-spl.stm32
 PD	0x05	fsbl2	Binary	mmc1	boot2	rootfs/u-boot-spl.stm32
 PD	0x06	ssbl	Binary	mmc1	0x00080000	rootfs/u-boot.img
 PD	0x07	ssbl2	Binary	mmc1	0x00280000	rootfs/u-boot.img
-PD	0x21	rootfs	System	mmc1	0x00600000	rootfs/root.erofs.bin
-PE	0x22	rootfs2	Binary	mmc1	0x30600000	
-PE	0x23	userdata	Binary	mmc1	0x60800000	
+#PD	0x21	rootfs	System	mmc1	0x00600000	rootfs/root.erofs.bin
+#PE	0x22	rootfs2	Binary	mmc1	0x30600000	
+PE	0x23	userdata	Binary	mmc1	0x00600000	
+#PE	0x23	userdata	Binary	mmc1	0x60800000	

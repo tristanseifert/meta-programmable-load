@@ -17,7 +17,7 @@
  * Save Date: 2022.05.31, save Time: 00:04:11
  */
 
-#define DDR_MEM_NAME	"DDR3-DDR3L 16bits 533000kHz"
+#define DDR_MEM_NAME	"DDR3-DDR3L 16bits 533MHz"
 #define DDR_MEM_SPEED	533000
 #define DDR_MEM_SIZE	0x20000000
 

@@ -3,10 +3,11 @@
 # the eMMC on the board.
 
 ### bootloader partitions
-part ssbl --source rawcopy --sourceparams="file=u-boot.img" --ondisk mmcblk --align 1 --size 2M --part-name ssbl
+part ssbl --source rawcopy --sourceparams="file=u-boot.img" --ondisk mmcblk --size 2M --part-name ssbl1
+part ssbl --source rawcopy --sourceparams="file=u-boot.img" --ondisk mmcblk --size 2M --part-name ssbl2
 
 ### system data partitions
-part / --source rootfs --ondisk mmcblk --fstype=erofs --mkfs-extraopts="-zlz4hc" --align 128 --size 256M --active --part-name rootfs
+part / --source rootfs --ondisk mmcblk --fstype=erofs --mkfs-extraopts="-zlz4hc" --align 2048 --size 256M --active --part-name rootfs
 
 ### user data partitions
 # reserve space for an F2FS user data partition

@@ -15,5 +15,5 @@ rm -f rootfs/u-boot.img
 cp "$1/tmp/deploy/images/load-rev3/u-boot.img" rootfs/u-boot.img
 
 # copy image
-rm -r rootfs/root.erofs
-dd if="$1/tmp/deploy/images/load-rev3/core-image-base-load-rev3.wic" of=rootfs/root.erofs bs=512 skip=12288
+rm -f rootfs/root.erofs
+dd if="$1/tmp/deploy/images/load-rev3/core-image-base-load-rev3.wic" of=rootfs/root.erofs.bin bs=512 skip=12288

@@ -576,6 +576,7 @@
 
             // TODO: figure out what the proper external interrupt configuration is here
             // interrupts-extended = <&exti_pwr 55 IRQ_TYPE_EDGE_FALLING>;
+            interrupts-extended = <&exti 55 IRQ_TYPE_EDGE_FALLING>;
 
             interrupt-controller;
             #interrupt-cells = <2>;
