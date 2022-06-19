@@ -8,7 +8,13 @@ WatchdogSec=10
 Restart=on-failure
 RestartSec=5
 User=confd
+Group=load
 PrivateTmp=true
+
+# create the socket directory (as root)
+PermissionsStartOnly=true
+ExecStartPre=-/bin/mkdir /var/run/confd
+ExecStartPre=/bin/chown -R confd:load /var/run/confd/
 
 [Install]
 WantedBy=local-fs.target

@@ -18,7 +18,7 @@
  */
 int main(const int argc, char * const *argv) {
     int err;
-    std::string socketPath{"/var/log/confd.sock"};
+    std::string socketPath{"/var/run/confd/rpc.sock"};
     std::string keyName;
     bool read{false};
 

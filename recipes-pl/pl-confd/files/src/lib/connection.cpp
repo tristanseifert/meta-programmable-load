@@ -42,7 +42,7 @@ static void CreateSocket(const char *path) {
 
 int confd_open(const char *socketPath) {
     // TODO: prevent against repeated opening?
-    auto realPath = socketPath ? socketPath : "/var/run/confd.sock";
+    auto realPath = socketPath ? socketPath : "/var/run/confd/rpc.sock";
 
     try {
         CreateSocket(realPath);
