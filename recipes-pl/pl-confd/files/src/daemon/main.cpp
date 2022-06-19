@@ -194,8 +194,12 @@ int main(const int argc, char * const * argv) {
     // TODO: implement
 
     // perform server setup, then enter run loop
-    InitLibevent();
-    MainLoop();
+    try {
+        InitLibevent();
+        MainLoop();
+    } catch(const std::exception &err) {
+        PLOG_FATAL << "failed to start server: " << err.what();
+    }
 
     // close data store
 
