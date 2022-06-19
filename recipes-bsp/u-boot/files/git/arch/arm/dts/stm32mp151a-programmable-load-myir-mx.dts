@@ -1056,13 +1056,6 @@
 	/* USER CODE END usbphyc_port1 */
 };
 
-&vrefbuf {
-        regulator-min-microvolt = <2500000>;
-        regulator-max-microvolt = <2500000>;
-        vdda-supply = <&vdda>;
-        status = "okay";
-};
-
 /* USER CODE BEGIN addons */
 / {
     aliases {
@@ -1414,7 +1407,9 @@
             reset-assert-us = <5000>;
             reset-deassert-us = <10000>;
 
-            // TODO: configure interrupt line
+            // PHY interrupt line
+            interrupt-parent = <&gpioa>;
+            interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
         };
     };
 };

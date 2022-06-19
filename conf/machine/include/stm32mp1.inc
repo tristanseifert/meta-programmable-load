@@ -45,7 +45,7 @@ IMAGE_INSTALL:append = " \
 
 # tools
 IMAGE_INSTALL:append = " \
-    curl i2c-tools mmc-utils u-boot-env \
+    curl u-boot-env \
 "
 
 # OpenAMP (for coprocessor communication)
