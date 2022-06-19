@@ -129,6 +129,10 @@ index 1b1c255b98..1c097f7279 100644
 +# disable some boot commands
 +CONFIG_BOOTM_VXWORKS=n
 +CONFIG_CMD_BOOTEFI=n
++
++# hardware drivers
++CONFIG_I2C_MUX=y
++CONFIG_I2C_MUX_PCA954x=y
 -- 
 2.32.1 (Apple Git-133)
 

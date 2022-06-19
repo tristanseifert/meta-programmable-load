@@ -16,10 +16,17 @@ UBOOT_EXTLINUX_KERNEL_IMAGE_default = "/boot/zImage-5.15.48"
 SRC_URI:append:stm32mp1 = " \
     file://0002-stm32mp1-programmable-load.patch \
     file://0003-programmable-load-dts.patch \
+    file://0004-add-mach-stm32mp-sources.patch \
     file://git/arch/arm/dts/stm32mp151a-programmable-load-myir-mx.dts \
     file://git/arch/arm/dts/stm32mp151a-programmable-load-myir-mx-u-boot.dtsi \
     file://git/arch/arm/dts/stm32mp15-mx.dtsi \
     file://git/arch/arm/dts/stm32mp15xa.dtsi \
     file://git/arch/arm/dts/stm32mp15-m4-srm.dtsi \
+    file://git/arch/arm/mach-stm32mp/conf_prom.c \
+    file://git/arch/arm/mach-stm32mp/conf_prom.h \
+    file://git/arch/arm/mach-stm32mp/encoding_helpers.c \
+    file://git/arch/arm/mach-stm32mp/encoding_helpers.h \
+    file://git/arch/arm/mach-stm32mp/hash_helpers.c \
+    file://git/arch/arm/mach-stm32mp/hash_helpers.h \
     file://git/include/dt-bindings/pinctrl/stm32-pinfunc-2.h \
 "
