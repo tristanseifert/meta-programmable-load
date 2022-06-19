@@ -7,4 +7,6 @@ PD	0x06	ssbl	Binary	mmc1	0x00080000	rootfs/u-boot.img
 PD	0x07	ssbl2	Binary	mmc1	0x00280000	rootfs/u-boot.img
 PD	0x21	rootfs	System	mmc1	0x00600000	rootfs/root.erofs.bin
 PE	0x22	rootfs2	Binary	mmc1	0x30600000	
-PE	0x23	userdata	Binary	mmc1	0x60800000	
+PE	0x23	reserved	Binary	mmc1	0x60600000	
+#PE	0x24	userdata-raw	Binary	mmc1	0x60800000	
+PE	0x24	userdata	Binary	mmc1	0x60800000	

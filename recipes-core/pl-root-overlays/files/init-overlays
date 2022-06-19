@@ -12,12 +12,12 @@ DEVICE=/dev/mmcblk0
 ROOTPART=/dev/mmcblk0p4
 # user fs partition (raw)
 #USERPART_RAW=/dev/disk/by-partlabel/userdata-raw
-USERPART_RAW=/dev/mmcblk0p5
+USERPART_RAW=/dev/mmcblk0p6
 # user fs partition (formatted)
 #USERPART=/dev/disk/by-partlabel/userdata
-USERPART=/dev/mmcblk0p5
+USERPART=/dev/mmcblk0p6
 # number of partitions, when completely partitioned
-NUM_DESIRED_PARTITIONS=5
+NUM_DESIRED_PARTITIONS=6
 
 echo "Initializing rootfs overlays..."
 
@@ -83,7 +83,7 @@ init_userdata_format()
 
     # for confd
     /bin/mkdir -p /persistent/config/confd-data/
-    /bin/chown -R confd:daemon /persistent/config/confd-data
+    /bin/chown -R confd:load /persistent/config/confd-data
     /bin/chmod -R 700 /persistent/config/confd-data
 
     # global permissions

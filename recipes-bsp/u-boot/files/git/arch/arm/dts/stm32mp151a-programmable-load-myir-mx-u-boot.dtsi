@@ -23,6 +23,25 @@
     /* USER CODE BEGIN root */
     config {
         u-boot,mmc-env-partition = "ssbl";
+        u-boot,error-led = "error";
+    };
+    /*
+    aliases {
+        mmc0 = &sdmmc2;
+        usb0 = &usbotg_hs;
+    };*/
+    led {
+        u-boot,dm-pre-reloc;
+        u-boot,dm-spl;
+        // bicolor status LED
+        status {
+            u-boot,dm-pre-reloc;
+            u-boot,dm-spl;
+            label = "error";
+            gpios = <&gpioz 6 GPIO_ACTIVE_LOW>;
+            default-state = "off";
+            status = "okay";
+        };
     };
     /* USER CODE END root */
 
@@ -47,8 +66,6 @@
             /* USER CODE END clk_hsi */
         };
         clk_csi: clk-csi {
-            status = "disabled";
-
             /* USER CODE BEGIN clk_csi */
             u-boot,dm-pre-reloc;
             u-boot,dm-spl;
@@ -60,6 +77,9 @@
             /* USER CODE BEGIN clk_lse */
             u-boot,dm-pre-reloc;
             u-boot,dm-spl;
+            st,css;
+            st,drive = <LSEDRV_MEDIUM_HIGH>;
+            clock-frequency = <32768>;
             /* USER CODE END clk_lse */
         };
         clk_hse: clk-hse {
@@ -97,30 +117,30 @@
 		1 		/*APB3*/
 		1 		/*APB4*/
 		2 		/*APB5*/
-		0 		/*RTC*/
+		23 		/*RTC*/
 		0 		/*MCO1*/
 		0 		/*MCO2*/
 	>;
 	st,pkcs = <
-		CLK_CKPER_DISABLED
+		CLK_CKPER_HSE
 		CLK_ETH_PLL4P
-		CLK_SDMMC12_PLL3R
-		CLK_STGEN_HSI
+	        CLK_SDMMC12_PLL4P
+		CLK_STGEN_HSE
 		CLK_USBPHY_HSE
 		CLK_SPI2S1_DISABLED
 		CLK_SPI2S23_PLL4P
 		CLK_SPI45_PCLK2
 		CLK_SPI6_DISABLED
-		CLK_I2C46_PCLK5
+		CLK_I2C46_HSI
 		CLK_SDMMC3_DISABLED
 		CLK_USBO_USBPHY
 		CLK_ADC_DISABLED
 		CLK_CEC_DISABLED
-		CLK_I2C12_PLL4R
+		CLK_I2C12_HSI
 		CLK_I2C35_DISABLED
 		CLK_UART1_DISABLED
-		CLK_UART24_HSE
-		CLK_UART35_HSE
+		CLK_UART24_HSI
+		CLK_UART35_HSI
 		CLK_UART6_DISABLED
 		CLK_UART78_DISABLED
 		CLK_SPDIF_DISABLED
@@ -128,36 +148,29 @@
 		CLK_SAI2_DISABLED
 		CLK_SAI3_DISABLED
 		CLK_SAI4_DISABLED
-		CLK_RNG1_PLL4R
-		CLK_RNG2_PLL4R
+		CLK_RNG1_LSE
+		CLK_RNG2_LSE
 		CLK_LPTIM1_DISABLED
 		CLK_LPTIM23_DISABLED
 		CLK_LPTIM45_DISABLED
 	>;
-	pll2:st,pll@1 {
-		compatible = "st,stm32mp1-pll";
-		reg = <1>;
-		cfg = < 2 65 1 1 0 PQR(1,0,1) >;
-		frac = < 0x1400 >;
-		u-boot,dm-pre-reloc;
-                u-boot,dm-spl;
-	};
-	pll3:st,pll@2 {
-		compatible = "st,stm32mp1-pll";
-		reg = <2>;
-		cfg = < 1 51 2 5 3 PQR(1,0,1) >;
-		frac = < 0x800 >;
-		u-boot,dm-pre-reloc;
-                u-boot,dm-spl;
-	};
-	pll4:st,pll@3 {
-		compatible = "st,stm32mp1-pll";
-		reg = <3>;
-		cfg = < 1 49 11 23 14 PQR(1,1,1) >;
-		u-boot,dm-pre-reloc;
-                u-boot,dm-spl;
-	};
 
+
+	//pll2:st,pll@1 {
+	st,pll@1 {
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+	};
+	//pll3:st,pll@2 {
+	st,pll@2 {
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+	};
+	//pll4:st,pll@3 {
+	st,pll@3 {
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+	};
 	/* USER CODE BEGIN rcc */
 	/* USER CODE END rcc */
 };
@@ -173,14 +186,6 @@
 
 &pinctrl {
     u-boot,dm-spl;
-};
-
-// watchdog (for uboot side)
-&iwdg2 {
-    u-boot,dm-pre-reloc;
-    timeout-sec = <32>;
-    status = "okay";
-    secure-status = "okay";
 };
 
 
@@ -261,6 +266,7 @@
 };
 
 /* USER CODE BEGIN addons */
+// MXCube generated SDMMC pinout
 &sdmmc2_pins_mx {
     u-boot,dm-spl;
     pins1 {
@@ -304,6 +310,30 @@
     u-boot,dm-pre-reloc;
 };
 
+// i2c bus for auxiliary stuff
+&i2c2 {
+    u-boot,dm-pre-reloc;
+
+    i2c-switch@70 {
+        u-boot,dm-pre-reloc;
+        i2c@0 {
+            u-boot,dm-pre-reloc;
+        };
+        i2c@1 {
+            u-boot,dm-pre-reloc;
+
+            // config and MAC address EEPROM
+            eeprom-conf@50 {
+                u-boot,dm-pre-reloc;
+            };
+            eeprom-eui@58 {
+                u-boot,dm-pre-reloc;
+            };
+        };
+    };
+};
+
+// i2c bus for pmic
 &i2c4 {
     u-boot,dm-spl;
     u-boot,dm-pre-reloc;

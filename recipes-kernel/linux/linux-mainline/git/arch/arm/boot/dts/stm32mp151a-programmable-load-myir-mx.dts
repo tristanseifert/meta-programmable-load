@@ -11,6 +11,10 @@
 /dts-v1/;
 #include <dt-bindings/pinctrl/stm32-pinfunc-2.h>
 
+/* PLL output is enable when x=1, with x=p,q or r */
+#define PQR(p, q, r)	(((p) & 1) | (((q) & 1) << 1) | (((r) & 1) << 2))
+
+
 #include "stm32mp151.dtsi"
 #include "stm32mp15xa.dtsi"
 #include "stm32mp15xxac-pinctrl.dtsi"
@@ -41,10 +45,57 @@
 		ranges;
 
 		/* USER CODE BEGIN reserved-memory */
+                mcuram2: mcuram2@10000000 {
+                    compatible = "shared-dma-pool";
+                    reg = <0x10000000 0x40000>;
+                    no-map;
+                };
+
+                vdev0vring0: vdev0vring0@10040000 {
+                    compatible = "shared-dma-pool";
+                    reg = <0x10040000 0x1000>;
+                    no-map;
+                };
+
+                vdev0vring1: vdev0vring1@10041000 {
+                    compatible = "shared-dma-pool";
+                    reg = <0x10041000 0x1000>;
+                    no-map;
+                };
+
+                vdev0buffer: vdev0buffer@10042000 {
+                    compatible = "shared-dma-pool";
+                    reg = <0x10042000 0x4000>;
+                    no-map;
+                };
+
+                mcuram: mcuram@30000000 {
+                    compatible = "shared-dma-pool";
+                    reg = <0x30000000 0x40000>;
+                    no-map;
+                };
+
+                retram: retram@38000000 {
+                    compatible = "shared-dma-pool";
+                    reg = <0x38000000 0x10000>;
+                    no-map;
+                };
 		/* USER CODE END reserved-memory */
 	};
 
 	/* USER CODE BEGIN root */
+        // taken from MYiR SoM device tree (stm32mp15xx-ya15xc-t.dtsi)
+        usb_phy_tuning: usb-phy-tuning {
+            st,hs-dc-level = <2>;
+            st,fs-rftime-tuning;
+            st,hs-rftime-reduction;
+            st,hs-current-trim = <15>;
+            st,hs-impedance-trim = <1>;
+            st,squelch-level = <3>;
+            st,hs-rx-offset = <2>;
+            st,no-lsfs-sc;
+        };
+
         /* fixed 5V rail */
         vreg_5v: vreg-5v {/*: fixedregulator@0 { */
             compatible = "regulator-fixed";
@@ -269,14 +320,16 @@
 					 <STM32_PINMUX('D', 3, AF9)>, /* SDMMC2_D7 */
 					 <STM32_PINMUX('E', 5, AF9)>, /* SDMMC2_D6 */
 					 <STM32_PINMUX('G', 6, AF10)>; /* SDMMC2_CMD */
-			bias-disable;
+			//bias-disable;
+                        bias-pull-up;
 			drive-push-pull;
 			slew-rate = <1>;
 		};
 		pins2 {
 			u-boot,dm-pre-reloc;
 			pinmux = <STM32_PINMUX('E', 3, AF9)>; /* SDMMC2_CK */
-			bias-disable;
+			// bias-disable;
+                        bias-pull-up;
 			drive-push-pull;
 			slew-rate = <3>;
 		};
@@ -294,21 +347,24 @@
 					 <STM32_PINMUX('B', 15, AF9)>, /* SDMMC2_D1 */
 					 <STM32_PINMUX('D', 3, AF9)>, /* SDMMC2_D7 */
 					 <STM32_PINMUX('E', 5, AF9)>; /* SDMMC2_D6 */
-			bias-disable;
+			//bias-disable;
+                        bias-pull-up;
 			drive-push-pull;
 			slew-rate = <1>;
 		};
 		pins2 {
 			u-boot,dm-pre-reloc;
 			pinmux = <STM32_PINMUX('E', 3, AF9)>; /* SDMMC2_CK */
-			bias-disable;
+			//bias-disable;
+                        bias-pull-up;
 			drive-push-pull;
 			slew-rate = <3>;
 		};
 		pins3 {
 			u-boot,dm-pre-reloc;
 			pinmux = <STM32_PINMUX('G', 6, AF10)>; /* SDMMC2_CMD */
-			bias-disable;
+			//bias-disable;
+                        bias-pull-up;
 			drive-open-drain;
 			slew-rate = <1>;
 		};
@@ -483,6 +539,13 @@
 	status = "okay";
 
 	/* USER CODE BEGIN m4_rproc */
+        memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>,
+                        <&vdev0vring1>, <&vdev0buffer>;
+        mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>;
+        mbox-names = "vq0", "vq1", "shutdown";
+        interrupt-parent = <&exti>;
+        interrupts = <68 1>;
+        wakeup-source;
 	/* USER CODE END m4_rproc */
 
 	m4_system_resources{
@@ -500,6 +563,11 @@
 	/* USER CODE END bsec */
 };
 
+// temp sensor
+&dts {
+    status = "okay";
+};
+
 &dma1{
 	status = "okay";
 
@@ -508,7 +576,7 @@
 };
 
 &dma2{
-	status = "disabled";
+	status = "okay";
 
 	/* USER CODE BEGIN dma2 */
 	/* USER CODE END dma2 */
@@ -516,9 +584,6 @@
 
 &dmamux1{
 	status = "okay";
-
-	dma-masters = <&dma1>;
-	dma-channels = <8>;
 
 	/* USER CODE BEGIN dmamux1 */
 	/* USER CODE END dmamux1 */
@@ -548,6 +613,13 @@
 	/* USER CODE END ipcc */
 };
 
+// watchdog (during boot)
+&iwdg2 {
+    u-boot,dm-pre-reloc;
+    timeout-sec = <32>;
+    status = "okay";
+};
+
 &i2c2{
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&i2c2_pins_mx &i2c2_pins_z_mx>;
@@ -570,6 +642,18 @@
         clock-frequency = <400000>;
         secure-status = "okay";
 
+        /delete-property/dmas;
+        /delete-property/dma-names;
+
+        /* eeprom (on MYiR SoM) */
+        eeprom@50 {
+            compatible = "atmel,24c32";
+            reg = <0x50>;
+            pagesize = <32>;
+            wp-gpios = <&gpioa 14 0>;
+            num-addresses = <8>;
+        };
+
         pmic: stpmic@33 {
             compatible = "st,stpmic1";
             reg = <0x33>;
@@ -581,7 +665,16 @@
             interrupt-controller;
             #interrupt-cells = <2>;
             status = "okay";
-            secure-status = "okay";
+
+            watchdog {
+                compatible = "st,stpmic1-wdt";
+                status = "disabled";
+            };
+
+            onkey {
+                compatible = "st,stpmic1-onkey";
+                status = "disabled";
+            };
 
             regulators {
                 compatible = "st,stpmic1-regulators";
@@ -590,11 +683,11 @@
                 buck3-supply = <&vreg_5v>;
                 buck4-supply = <&vreg_5v>;
                 ldo1-supply = <&v3v3>;
-                //ldo2-supply = <&vreg_5v>;
-                //ldo3-supply = <&vdd_ddr>;
+                ldo2-supply = <&vreg_5v>;
+                ldo3-supply = <&vdd_ddr>;
                 ldo4-supply = <&vreg_5v>;
-                //ldo5-supply = <&vreg_5v>;
-                //ldo6-supply = <&v3v3>;
+                ldo5-supply = <&vreg_5v>;
+                ldo6-supply = <&v3v3>;
                 vref_ddr-supply = <&vreg_5v>;
                 boost-supply = <&vreg_5v>;
                 pwr_sw1-supply = <&bst_out>;
@@ -607,16 +700,6 @@
                     regulator-always-on;
                     regulator-initial-mode = <0>;
                     regulator-over-current-protection;
-                    lp-stop {
-                        regulator-on-in-suspend;
-                        regulator-suspend-microvolt = <1200000>;
-                    };
-                    standby-ddr-sr {
-                        regulator-off-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
 
                 vdd_ddr: buck2 {
@@ -626,17 +709,6 @@
                     regulator-always-on;
                     regulator-initial-mode = <0>;
                     regulator-over-current-protection;
-                    lp-stop {
-                        regulator-suspend-microvolt = <1350000>;
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-sr {
-                        regulator-suspend-microvolt = <1350000>;
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
 
                 vdd: buck3 {
@@ -647,18 +719,6 @@
                     st,mask-reset;
                     regulator-initial-mode = <0>;
                     regulator-over-current-protection;
-                    lp-stop {
-                        regulator-suspend-microvolt = <3300000>;
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-sr {
-                        regulator-suspend-microvolt = <3300000>;
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-suspend-microvolt = <3300000>;
-                        regulator-on-in-suspend;
-                    };
                 };
 
                 v3v3: buck4 {
@@ -668,16 +728,6 @@
                     regulator-always-on;
                     regulator-over-current-protection;
                     regulator-initial-mode = <0>;
-                    lp-stop {
-                        regulator-suspend-microvolt = <3300000>;
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-sr {
-                        regulator-off-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
 
                 vdda: ldo1 {
@@ -685,12 +735,6 @@
                     regulator-min-microvolt = <1700000>;
                     regulator-max-microvolt = <3300000>;
                     regulator-always-on;
-                    standby-ddr-sr {
-                        regulator-off-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
 /*
                 vldo2: ldo2 {
@@ -698,61 +742,33 @@
                     regulator-min-microvolt = <1700000>;
                     regulator-max-microvolt = <3300000>;
                     regulator-always-on;
-                    standby-ddr-sr {
-                        regulator-off-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
 */
-/*
+
                 vtt_ddr: ldo3 {
                     regulator-name = "vtt_ddr";
                     regulator-min-microvolt = <500000>;
                     regulator-max-microvolt = <750000>;
                     regulator-always-on;
                     regulator-over-current-protection;
-                    lp-stop {
-                        regulator-off-in-suspend;
-                    };
-                    standby-ddr-sr {
-                        regulator-off-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
-*/
+
 
                 vdd_usb: ldo4 {
                     regulator-name = "vdd_usb";//to usb
                     regulator-min-microvolt = <3300000>;
                     regulator-max-microvolt = <3300000>;
                     regulator-always-on;
-                    standby-ddr-sr {
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
 
 
-/*
+
                 vdd_sd: ldo5 {
                     regulator-name = "vdd_sd";
                     regulator-min-microvolt = <1700000>;
                     regulator-max-microvolt = <3900000>;
                     regulator-boot-on;
-                    standby-ddr-sr {
-                        regulator-off-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
-*/
 /*
                 vldo6: ldo6 {
                     regulator-name = "vldo6";
@@ -771,15 +787,6 @@
                     regulator-name = "vref_ddr";
                     regulator-always-on;
                     regulator-over-current-protection;
-                    lp-stop {
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-sr {
-                        regulator-on-in-suspend;
-                    };
-                    standby-ddr-off {
-                        regulator-off-in-suspend;
-                    };
                 };
 
                 bst_out: boost {
@@ -796,7 +803,7 @@
                 };
             };
     };
-	/* USER CODE END i2c4 */
+    /* USER CODE END i2c4 */
 };
 
 &ltdc{
@@ -877,6 +884,63 @@
 	status = "okay";
 
 	/* USER CODE BEGIN rcc */
+	pll2:st,pll@1 {
+		compatible = "st,stm32mp1-pll";
+		reg = <1>;
+		cfg = < 2 65 1 1 0 PQR(1,1,1) >;
+		frac = < 0x1400 >;
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+	};
+	pll3:st,pll@2 {
+		compatible = "st,stm32mp1-pll";
+		reg = <2>;
+		cfg = < 1 51 2 5 3 PQR(1,1,1) >;
+		frac = < 0x800 >;
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+	};
+	pll4:st,pll@3 {
+		compatible = "st,stm32mp1-pll";
+		reg = <3>;
+		cfg = < 1 49 11 23 14 PQR(1,1,1) >;
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+	};
+
+     /* VCO = 1066.0 MHz => P = 266 (AXI), Q = 533 (GPU), R = 533 (DDR) */
+        /*pll2: st,pll@1 {
+                compatible = "st,stm32mp1-pll";
+                reg = <1>;
+                cfg = <2 65 1 0 0 PQR(1,1,1)>;
+                frac = <0x1400>;
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+        };*/
+
+        /* VCO = 417.8 MHz => P = 209, Q = 24, R = 11 */
+        /*
+        pll3: st,pll@2 {
+                compatible = "st,stm32mp1-pll";
+                reg = <2>;
+                cfg = <1 33 1 16 36 PQR(1,1,1)>;
+                frac = <0x1a04>;
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+        };*/
+
+        /* VCO = 594.0 MHz => P = 99, Q = 74, R = 74 */
+        /*
+        pll4: st,pll@3 {
+                compatible = "st,stm32mp1-pll";
+                reg = <3>;
+                //cfg = <3 124 5 11 11 PQR(1,1,1)>;
+                cfg = < 3 98 5 7 7 PQR(1,1,1) >;
+		u-boot,dm-pre-reloc;
+                u-boot,dm-spl;
+        };
+        */
+
 	/* USER CODE END rcc */
 };
 
@@ -895,26 +959,27 @@
 };
 
 &sdmmc2{
-	u-boot,dm-pre-reloc;
-	pinctrl-names = "default", "opendrain", "sleep";
-	pinctrl-0 = <&sdmmc2_pins_mx>;
-	pinctrl-1 = <&sdmmc2_opendrain_pins_mx>;
-	pinctrl-2 = <&sdmmc2_sleep_pins_mx>;
-	status = "okay";
+    status = "okay";
+    // pin config from stmcubemx
+    pinctrl-names = "default", "opendrain", "sleep";
+    pinctrl-0 = <&sdmmc2_pins_mx>;
+    pinctrl-1 = <&sdmmc2_opendrain_pins_mx>;
+    pinctrl-2 = <&sdmmc2_sleep_pins_mx>;
 
-	/* USER CODE BEGIN sdmmc2 */
-        /* define it as non-removable eMMC flash */
-        non-removable;
-        no-sd;
-        no-sdio;
-        /* polarity of clock and data bus width */
-        st,neg-edge;
-        bus-width = <8>;
-        /* supplies */
-        vmmc-supply = <&v3v3>;
-        vqmmc-supply = <&vdd>;
-        mmc-ddr-3_3v;
-	/* USER CODE END sdmmc2 */
+    /* USER CODE BEGIN sdmmc2 */
+    /* define it as non-removable eMMC flash */
+    non-removable;
+    no-sd;
+    no-sdio;
+    /* polarity of clock and data bus width */
+    st,neg-edge;
+    bus-width = <8>;
+    /* supplies */
+    vmmc-supply = <&v3v3>;
+    vqmmc-supply = <&vdd>;
+    no-1-8-v;
+    mmc-ddr-3_3v;
+    /* USER CODE END sdmmc2 */
 };
 
 &spi3{
@@ -993,21 +1058,28 @@
 	status = "okay";
 
 	/* USER CODE BEGIN usbh_ehci */
+        phys = <&usbphyc_port0>;
+        phy-names = "usb";
 	/* USER CODE END usbh_ehci */
 };
 
-&usbh_ohci{
+/*&usbh_ohci{
 	status = "okay";
 
-	/* USER CODE BEGIN usbh_ohci */
-	/* USER CODE END usbh_ohci */
-};
+	// USER CODE BEGIN usbh_ohci
+        phys = <&usbphyc_port0>;
+        phy-names = "usb";
+	// USER CODE END usbh_ohci
+};*/
 
 &usbotg_hs{
 	u-boot,dm-pre-reloc;
 	status = "okay";
 
 	/* USER CODE BEGIN usbotg_hs */
+        // set the PHY to use
+        phys = <&usbphyc_port1 0>;
+        phy-names = "usb2-phy";
         /* force always into device mode */
         dr_mode = "peripheral";
         usb-role-switch;
@@ -1028,6 +1100,8 @@
 	status = "okay";
 
 	/* USER CODE BEGIN usbphyc_port0 */
+        phy-supply = <&vdd_usb>;
+        st,phy-tuning = <&usb_phy_tuning>;
 	/* USER CODE END usbphyc_port0 */
 };
 
@@ -1036,7 +1110,16 @@
 	status = "okay";
 
 	/* USER CODE BEGIN usbphyc_port1 */
+        phy-supply = <&vdd_usb>;
+        st,phy-tuning = <&usb_phy_tuning>;
 	/* USER CODE END usbphyc_port1 */
+};
+
+&vrefbuf {
+        regulator-min-microvolt = <2500000>;
+        regulator-max-microvolt = <2500000>;
+        vdda-supply = <&vdda>;
+        status = "okay";
 };
 
 /* USER CODE BEGIN addons */
@@ -1147,20 +1230,6 @@
         rotary-encoder,steps-per-period = <1>; // full period mode
     };
 
-    //LEDs driven by PWM
-    pwmleds {
-        compatible = "pwm-leds";
-        status = "okay";
-
-/*
-        backlight {
-            label = "lcd-backlight";
-            pwms = <&pwm4 0 500000 0>;
-            max-brightness = <255>;
-        }
-*/
-    };
-
     // LEDs connected to GPIOs
     statusleds {
         compatible = "gpio-leds";
@@ -1173,7 +1242,7 @@
         // bi-color on-board A7 status LED
         ext-status {
             // label = "Status Bicolor";
-            gpios = <&gpioz 6 GPIO_ACTIVE_LOW>;
+            gpios = <&gpioz 6 GPIO_ACTIVE_HIGH>;
             linux,default-trigger = "heartbeat";
         };
         // SoM status LED
@@ -1401,33 +1470,24 @@
             // compatible = "ethernet-phy-id0007.c0f0", "ethernet-phy-ieee802.3-c22";
             compatible = "ethernet-phy-ieee802.3-c22";
 
-            // TODO: is this the right address?
-            reg = <0>;
+            reg = <1>;
 
             // reset GPIPO
             reset-gpios = <&gpioc 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
             reset-assert-us = <5000>;
             reset-deassert-us = <10000>;
+
+            // TODO: configure interrupt line
         };
     };
 };
 
 // define power regulator modes
-/*
 &pwr_regulators {
-    system_suspend_supported_soc_modes = <
-        STM32_PM_CSLEEP_RUN
-        STM32_PM_CSTOP_ALLOW_STOP
-        STM32_PM_CSTOP_ALLOW_LP_STOP
-        STM32_PM_CSTOP_ALLOW_STANDBY_DDR_SR
-    >;
-    system_off_soc_mode = <STM32_PM_CSTOP_ALLOW_STANDBY_DDR_OFF>;
     vdd-supply = <&vdd>;
-
     // XXX: is this for the USB PHYs?
-    vdd_3v3_usbfs-supply = <&vdd_usb>;
+    // vdd_3v3_usbfs-supply = <&vdd_usb>;
 };
-*/
 
 
 /* USER CODE END addons */
