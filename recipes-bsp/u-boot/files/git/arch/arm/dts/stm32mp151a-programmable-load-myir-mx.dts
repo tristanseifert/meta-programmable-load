@@ -463,26 +463,6 @@
 
 	/* USER CODE BEGIN pinctrl */
 
-        /* Front panel encoder */
-        front_encoder_pins: front-encoder@0 {
-            /* TODO: idk about this one man */
-            pins {
-                pinmux = <STM32_PINMUX('A', 4, GPIO)>,
-                         <STM32_PINMUX('A', 6, GPIO)>;
-                bias-pull-up;
-            };
-        };
-
-        /* on-board status LEDs */
-        /* see also a7_status_led_pins */
-        status_led_pins: statusleds {
-            pins {
-                pinmux = <STM32_PINMUX('A', 13, GPIO)>;
-                bias-disable;
-                drive-push-pull;
-            };
-        };
-
 	/* USER CODE END pinctrl */
 };
 
@@ -522,15 +502,6 @@
 	};
 
 	/* USER CODE BEGIN pinctrl_z */
-
-        /* A7 side status LED */
-        a7_status_led_pins {
-            pins {
-                pinmux  = <STM32_PINMUX('Z', 6, GPIO)>;
-                bias-disable;
-                drive-push-pull;
-            };
-        };
 
 	/* USER CODE END pinctrl_z */
 };
@@ -815,9 +786,12 @@
 	/* USER CODE BEGIN ltdc */
         /* configure the RGB output port */
         port {
+            #address-cells = <1>;
+            #size-cells = <0>;
+
             /* XXX: Maybe it is ep0 and reg = 0 instead? */
-            ltdc_ep1_out: endpoint@1 {
-                reg = <1>;
+            ltdc_ep0_out: endpoint@0 {
+                reg = <0>;
                 remote-endpoint = <&panel_rgb_in>;
             };
         };
@@ -907,39 +881,6 @@
 		u-boot,dm-pre-reloc;
                 u-boot,dm-spl;
 	};
-
-     /* VCO = 1066.0 MHz => P = 266 (AXI), Q = 533 (GPU), R = 533 (DDR) */
-        /*pll2: st,pll@1 {
-                compatible = "st,stm32mp1-pll";
-                reg = <1>;
-                cfg = <2 65 1 0 0 PQR(1,1,1)>;
-                frac = <0x1400>;
-		u-boot,dm-pre-reloc;
-                u-boot,dm-spl;
-        };*/
-
-        /* VCO = 417.8 MHz => P = 209, Q = 24, R = 11 */
-        /*
-        pll3: st,pll@2 {
-                compatible = "st,stm32mp1-pll";
-                reg = <2>;
-                cfg = <1 33 1 16 36 PQR(1,1,1)>;
-                frac = <0x1a04>;
-		u-boot,dm-pre-reloc;
-                u-boot,dm-spl;
-        };*/
-
-        /* VCO = 594.0 MHz => P = 99, Q = 74, R = 74 */
-        /*
-        pll4: st,pll@3 {
-                compatible = "st,stm32mp1-pll";
-                reg = <3>;
-                //cfg = <3 124 5 11 11 PQR(1,1,1)>;
-                cfg = < 3 98 5 7 7 PQR(1,1,1) >;
-		u-boot,dm-pre-reloc;
-                u-boot,dm-spl;
-        };
-        */
 
 	/* USER CODE END rcc */
 };
@@ -1155,10 +1096,11 @@
     };
 
     /* front LCD panel */
-    panel {
-        compatible = "simple-panel";
-        label = "Front LCD";
+    front_lcd: panel {
         status = "okay";
+        // TODO: we should use a proper panel definition (likely means patching panel-simple.c)
+        compatible = "foxlink,fl500wvr00-a0t", "simple-panel";
+        label = "Front LCD";
 
         /* physical dimensions and rotation */
         width-mm = <86>;
@@ -1176,10 +1118,9 @@
         power-supply = <&vreg_3v3>;
 
         /* video data source: LTDC RGB interface */
-        port@0 {
-            reg = <0>;
+        port {
             panel_rgb_in: endpoint {
-                remote_endpoint = <&ltdc_ep1_out>;
+                remote_endpoint = <&ltdc_ep0_out>;
             };
         };
 
@@ -1234,10 +1175,6 @@
     statusleds {
         compatible = "gpio-leds";
         status = "okay";
-
-        // configure the GPIOs
-        //pinctrl-names = "default";
-        //pinctrl-0 = <&status_led_pins>;
 
         // bi-color on-board A7 status LED
         ext-status {
