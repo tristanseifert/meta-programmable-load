@@ -1074,14 +1074,14 @@
         pwms = <&pwm2 0 1000000 0>;
     };
 
-    /* front panel LCD backlight */
+    // front panel LCD backlight
     panel_backlight: panel-backlight {
         compatible = "pwm-backlight";
         status = "okay";
-        /* period (ns) and inverted (no) */
-        pwms = <&pwm4 0 250000 0>;
+        // period (ns) and inverted (no)
+        pwms = <&pwm4 1 250000 0>;
 
-        /* TODO: these need tuning, likely */
+        // TODO: these need tuning, likely
         brightness-levels = <0 2 4 8 16 32 64 128 255>;
         default-brightness-level = <7>;
 
