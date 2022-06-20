@@ -27,6 +27,20 @@ enum confd_status {
 
 
 /**
+ * @brief Get library version
+ *
+ * Returns a string (in SemVer format) that indicates the current version of this library.
+ *
+ * @return Version string
+ *
+ * @remark You should not try to deallocate or modify the returned string; it is stored in a
+ *         static read-only area.
+ */
+const char *confd_version_string();
+
+
+
+/**
  * @brief Establish connection to confd
  *
  * Set up the initial socket connection to confd. This must be invoked before any other calls in

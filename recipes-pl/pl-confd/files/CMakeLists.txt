@@ -99,8 +99,9 @@ endif()
 # Provides an interface to query and update the configuration from applications with a simple C-
 # style interface.
 add_library(libconfd SHARED
-    src/lib/connection.cpp
-    src/lib/query.cpp
+    src/lib/RpcConnection.cpp
+    src/lib/wrapper/connection.cpp
+    src/lib/wrapper/query.cpp
     ${VERSION_FILE}
 )
 set_target_properties(libconfd PROPERTIES OUTPUT_NAME confd)
@@ -109,7 +110,7 @@ set_target_properties(libconfd PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(libconfd PROPERTIES SOVERSION 1)
 
 target_include_directories(libconfd PUBLIC include/lib)
-target_include_directories(libconfd PRIVATE include ${PKG_LIBCBOR_INCLUDE_DIRS})
+target_include_directories(libconfd PRIVATE include src/lib ${PKG_LIBCBOR_INCLUDE_DIRS})
 target_link_libraries(libconfd PRIVATE ${PKG_LIBCBOR_LIBRARIES})
 
 INSTALL(TARGETS libconfd LIBRARY
