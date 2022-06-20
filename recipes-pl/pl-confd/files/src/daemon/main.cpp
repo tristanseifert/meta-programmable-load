@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "RpcServer.h"
 #include "watchdog.h"
+#include "version.h"
 
 /// Whether the server shall continue to listen and process requests
 std::atomic_bool gRun{true};
@@ -42,7 +43,7 @@ static void InitLog(const plog::Severity level, const bool simple) {
         plog::init(level, &ttyAppender);
     }
 
-    PLOG_VERBOSE << "Logging initialized";
+    PLOG_VERBOSE << "Logging initialized - confd " << kVersion << " (" << kVersionGitHash << ")";
 }
 
 /**

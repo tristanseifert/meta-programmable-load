@@ -49,6 +49,19 @@ add_compile_options(-DSQLITE_OMIT_LOAD_EXTENSION) # this _should_ be enabled by 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/SQLiteCpp EXCLUDE_FROM_ALL)
 
 ###############
+# Create version file
+find_package(Git REQUIRED)
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} log -1 --format=%h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+set(VERSION_FILE ${CMAKE_CURRENT_BINARY_DIR}/version.c)
+configure_file(${CMAKE_CURRENT_LIST_DIR}/src/version.c.in ${VERSION_FILE} @ONLY)
+
+###############
 # Config daemon target
 #
 # This is the binary of the daemon that will serve configuration requests. Installed alongside it
@@ -58,6 +71,7 @@ add_executable(daemon
     src/daemon/Config.cpp
     src/daemon/RpcServer.cpp
     src/daemon/watchdog.cpp
+    ${VERSION_FILE}
 )
 set_target_properties(daemon PROPERTIES OUTPUT_NAME confd)
 
@@ -87,6 +101,7 @@ endif()
 add_library(libconfd SHARED
     src/lib/connection.cpp
     src/lib/query.cpp
+    ${VERSION_FILE}
 )
 set_target_properties(libconfd PROPERTIES OUTPUT_NAME confd)
 set_target_properties(libconfd PROPERTIES PUBLIC_HEADER ${CMAKE_CURRENT_LIST_DIR}/include/lib/confd.h)
@@ -107,7 +122,9 @@ INSTALL(TARGETS libconfd LIBRARY
 # setting single keys.
 add_executable(util
     src/util/main.cpp
+    ${VERSION_FILE}
 )
+target_include_directories(util PRIVATE include)
 set_target_properties(util PROPERTIES OUTPUT_NAME confdutil)
 target_link_libraries(util PRIVATE libconfd)
 
