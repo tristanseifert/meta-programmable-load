@@ -10,6 +10,8 @@
 #include <string>
 #include <unordered_map>
 
+class DataStore;
+
 /**
  * @brief Remote access interface
  *
@@ -22,7 +24,7 @@ class RpcServer {
         /**
          * @brief Initialize RPC server
          */
-        RpcServer() {
+        RpcServer(const std::shared_ptr<DataStore> &store) : store(store) {
             this->initSocket();
             this->initEventLoop();
         }
@@ -45,9 +47,14 @@ class RpcServer {
             struct bufferevent *event{nullptr};
             /// message receive buffer
             std::vector<std::byte> receiveBuf;
+            /// message transmit buffer
+            std::vector<std::byte> transmitBuf;
 
             Client(RpcServer *, const int);
             ~Client();
+
+            void replyTo(const struct rpc_header &, std::span<const std::byte>);
+            void send(std::span<const std::byte>);
         };
 
     private:
@@ -66,7 +73,10 @@ class RpcServer {
         void handleTermination();
 
         void doCfgQuery(std::span<const std::byte>, struct cbor_item_t *,
-                std::shared_ptr<Client> &);
+                const std::shared_ptr<Client> &);
+        void sendKeyValue(const struct rpc_header *, const std::shared_ptr<Client> &,
+                const std::string &, const PropertyValue &);
+
         void doCfgUpdate(std::span<const std::byte>, struct cbor_item_t *,
                 std::shared_ptr<Client> &);
 
@@ -94,6 +104,9 @@ class RpcServer {
 
         /// connected clients
         std::unordered_map<struct bufferevent *, std::shared_ptr<Client>> clients;
+
+        /// configuration data storage
+        std::shared_ptr<DataStore> store;
 };
 
 #endif

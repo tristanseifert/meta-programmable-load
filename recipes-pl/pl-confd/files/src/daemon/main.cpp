@@ -16,6 +16,7 @@
 #include <toml++/toml.h>
 
 #include "Config.h"
+#include "DataStore.h"
 #include "RpcServer.h"
 #include "watchdog.h"
 #include "version.h"
@@ -80,8 +81,8 @@ static void InitLibevent() {
  * shutdown sequence, including closing the listening sockets and any remaining client connections
  * and their associated resources.
  */
-static void MainLoop() {
-    RpcServer server;
+static void MainLoop(const std::shared_ptr<DataStore> &db) {
+    RpcServer server(db);
 
     PLOG_VERBOSE << "starting runloop";
 
@@ -108,6 +109,7 @@ int main(const int argc, char * const * argv) {
     std::string confPath;
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
+    std::shared_ptr<DataStore> store;
 
     // parse command line
     int c;
@@ -185,24 +187,31 @@ int main(const int argc, char * const * argv) {
         PLOG_DEBUG << "Finished reading config";
     } catch(const toml::parse_error &err) {
         PLOG_FATAL << "failed to parse config: " << err;
-        return -1;
+        return 2;
     } catch(const std::runtime_error &err) {
         PLOG_FATAL << "config invalid: " << err.what();
-        return -1;
+        return 2;
     }
 
     // open and initialize data store
-    // TODO: implement
+    try {
+        store = std::make_unique<DataStore>(Config::GetStoragePath());
+    } catch(const std::exception &err) {
+        PLOG_FATAL << "failed to initialize data store: " << err.what();
+        return 1;
+    }
 
     // perform server setup, then enter run loop
     try {
         InitLibevent();
-        MainLoop();
+        MainLoop(store);
     } catch(const std::exception &err) {
         PLOG_FATAL << "failed to start server: " << err.what();
+        return 1;
     }
 
     // close data store
+    store.reset();
 
     return 0;
 }

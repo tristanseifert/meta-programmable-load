@@ -69,6 +69,7 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/src/version.c.in ${VERSION_FILE} @ONLY)
 add_executable(daemon
     src/daemon/main.cpp
     src/daemon/Config.cpp
+    src/daemon/DataStore.cpp
     src/daemon/RpcServer.cpp
     src/daemon/watchdog.cpp
     ${VERSION_FILE}

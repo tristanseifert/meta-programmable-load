@@ -10,15 +10,17 @@
 #include <atomic>
 #include <cerrno>
 #include <cstring>
+#include <type_traits>
 #include <system_error>
-#include <variant>
 
 #include <fmt/core.h>
 #include <plog/Log.h>
 #include <rpc/types.h>
 
 #include "Config.h"
+#include "DataStore.h"
 #include "RpcServer.h"
+#include "Types.h"
 #include "watchdog.h"
 
 // declared in main.cpp
@@ -432,7 +434,7 @@ std::string RpcServer::ExtractKeyName(struct cbor_item_t *item) {
  * @param client Pointer to client this request originated on
 */
 void RpcServer::doCfgQuery(std::span<const std::byte> packet, cbor_item_t *item,
-        std::shared_ptr<Client> &client) {
+        const std::shared_ptr<Client> &client) {
     // validate inputs
     if(!cbor_isa_map(item)) {
         throw std::invalid_argument("invalid payload: expected map");
@@ -443,8 +445,117 @@ void RpcServer::doCfgQuery(std::span<const std::byte> packet, cbor_item_t *item,
         throw std::runtime_error("failed to get key name (wtf)");
     }
 
-    PLOG_ERROR << "TODO: request for key '" << keyName << "'";
+    // TODO: validate access
+    PLOG_VERBOSE << "key name = '" << keyName << "'";
+    auto result = this->store->getKey(keyName);
+
+    const auto hdr = reinterpret_cast<const struct rpc_header *>(packet.data());
+    this->sendKeyValue(hdr, client, keyName, result);
 }
+
+/**
+ * @brief Serialize the value of a key and send it
+ *
+ * Prepares a message containing the specified key value, and send it as a response to a query with
+ * the specified tag.
+ *
+ * @param hdr Message to send this as a reply to, or nullptr if none
+ * @param client Client connection to send the response to
+ * @param key Key name that was queried
+ * @param value Value of the key
+ */
+void RpcServer::sendKeyValue(const struct rpc_header *hdr, const std::shared_ptr<Client> &client,
+        const std::string &key, const PropertyValue &value) {
+    bool hasValue;
+    const bool found = !std::holds_alternative<std::monostate>(value);
+
+    // set up the generic part of the response
+    cbor_item_t *root = cbor_new_definite_map(found ? 3 : 2);
+    cbor_map_add(root, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_string("key")),
+        .value = cbor_move(cbor_build_string(key.c_str()))
+    });
+
+    // add the current value (if any)
+    std::visit([&](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+
+        // null value
+        if constexpr (std::is_same_v<T, std::nullptr_t>) {
+            cbor_map_add(root, (struct cbor_pair) {
+                .key = cbor_move(cbor_build_string("value")),
+                .value = cbor_move(cbor_new_null())
+            });
+            hasValue = true;
+        }
+        // UTF-8 string
+        else if constexpr (std::is_same_v<T, std::string>) {
+            cbor_map_add(root, (struct cbor_pair) {
+                .key = cbor_move(cbor_build_string("value")),
+                .value = cbor_move(cbor_build_string(arg.c_str()))
+            });
+            hasValue = true;
+        }
+        // byte vector (BLOB)
+        else if constexpr (std::is_same_v<T, Blob>) {
+            cbor_map_add(root, (struct cbor_pair) {
+                .key = cbor_move(cbor_build_string("value")),
+                .value = cbor_move(cbor_build_bytestring(reinterpret_cast<cbor_data>(arg.data()),
+                            arg.size()))
+            });
+            hasValue = true;
+        }
+        // integer
+        else if constexpr (std::is_same_v<T, uint64_t>) {
+            cbor_map_add(root, (struct cbor_pair) {
+                .key = cbor_move(cbor_build_string("value")),
+                .value = cbor_move(cbor_build_uint64(arg))
+            });
+            hasValue = true;
+        }
+        // double
+        else if constexpr (std::is_same_v<T, double>) {
+            cbor_map_add(root, (struct cbor_pair) {
+                .key = cbor_move(cbor_build_string("value")),
+                .value = cbor_move(cbor_build_float8(arg))
+            });
+            hasValue = true;
+        }
+        // boolean
+        else if constexpr (std::is_same_v<T, bool>) {
+            cbor_map_add(root, (struct cbor_pair) {
+                .key = cbor_move(cbor_build_string("value")),
+                .value = cbor_move(cbor_build_bool(arg))
+            });
+            hasValue = true;
+        }
+        // no value
+        else if constexpr (std::is_same_v<T, std::monostate>) {
+            hasValue = false;
+        }
+    }, value);
+
+    cbor_map_add(root, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_string("found")),
+        .value = cbor_move(cbor_build_bool(hasValue))
+    });
+
+    // serialize the payload
+    size_t rootBufLen;
+    unsigned char *rootBuf{nullptr};
+    const size_t serializedBytes = cbor_serialize_alloc(root, &rootBuf, &rootBufLen);
+    cbor_decref(&root);
+
+    // send it as a reply (ensuring we don't leak the above buffer… this sucks lol)
+    try {
+        client->replyTo(*hdr, {reinterpret_cast<const std::byte *>(rootBuf), serializedBytes});
+        free(rootBuf);
+    } catch(const std::exception &) {
+        free(rootBuf);
+        throw;
+    }
+}
+
 
 /**
  * @brief Process a request to update a config key
@@ -461,8 +572,7 @@ void RpcServer::doCfgQuery(std::span<const std::byte> packet, cbor_item_t *item,
  */
 void RpcServer::doCfgUpdate(std::span<const std::byte> packet, cbor_item_t *item,
         std::shared_ptr<Client> &client) {
-    std::variant<std::monostate, std::string, std::vector<std::byte>,
-        uint64_t, double, bool> value;
+    PropertyValue value;
 
     // validate inputs
     if(!cbor_isa_map(item)) {
@@ -614,5 +724,55 @@ RpcServer::Client::~Client() {
 
     if(this->event) {
         bufferevent_free(this->event);
+    }
+}
+
+/**
+ * @brief Reply to a previously received message
+ *
+ * Send a reply to a previous message, including the given (optional) payload. Replies include the
+ * same endpoint and tag values as the incoming request, and have the "reply" flag set.
+ *
+ * @param req Message header of the request we're replying to
+ * @param payload Optional payload to add to the reply
+ */
+void RpcServer::Client::replyTo(const struct rpc_header &req, std::span<const std::byte> payload) {
+    // calculate total size required and reserve space
+    const size_t msgSize = sizeof(struct rpc_header) + payload.size();
+    this->transmitBuf.resize(msgSize, std::byte(0));
+    std::fill(this->transmitBuf.begin(), this->transmitBuf.begin() + sizeof(struct rpc_header),
+            std::byte(0));
+
+    // fill in header
+    auto hdr = reinterpret_cast<struct rpc_header *>(this->transmitBuf.data());
+    hdr->version = kRpcVersionLatest;
+    hdr->length = msgSize;
+    hdr->endpoint = req.endpoint;
+    hdr->tag = req.tag;
+    hdr->flags = (1 << 0);
+
+    // copy payload
+    if(!payload.empty()) {
+        std::copy(payload.begin(), payload.end(),
+                (this->transmitBuf.begin() + offsetof(struct rpc_header, payload)));
+    }
+
+    // transmit the message
+    this->send(this->transmitBuf);
+}
+
+/**
+ * @brief Transmit the given packet
+ *
+ * Sends the packet data over the RPC connection. It's assumed the packet already has a header
+ * attached to it.
+ */
+void RpcServer::Client::send(std::span<const std::byte> buf) {
+    int err;
+    err = bufferevent_write(this->event, buf.data(), buf.size());
+
+    // IO failed
+    if(err == -1) {
+        throw std::system_error(errno, std::generic_category(), "write rpc reply");
     }
 }
