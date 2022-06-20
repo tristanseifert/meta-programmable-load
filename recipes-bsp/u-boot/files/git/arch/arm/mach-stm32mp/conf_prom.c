@@ -97,8 +97,8 @@ int pl_read_prom(void) {
 
     ret = env_set("serial#", gDeviceSerial);
     if(ret) {
+        // this is not a fatal error
         printf("%s failed!\n", "env_set");
-        goto beach;
     }
 
     // read MAC address and save in environment
@@ -110,8 +110,8 @@ int pl_read_prom(void) {
 
     ret = eth_env_set_enetaddr("ethaddr", gMacAddress);
     if(ret) {
+        // this is not a fatal error
         printf("%s failed!\n", "eth_env_set_enetaddr");
-        goto beach;
     }
 
     // we've read all data, so skip this routine next time
