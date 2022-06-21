@@ -37,6 +37,7 @@ pkg_search_module(PKG_LIBEVENT REQUIRED libevent)
 link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
 
 ###############
 # Create version file
@@ -58,11 +59,13 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/src/version.c.in ${VERSION_FILE} @ONLY)
 add_executable(daemon
     src/daemon/main.cpp
     src/daemon/Watchdog.cpp
+    src/daemon/drivers/gpio/Pca9535.cpp
+    src/daemon/drivers/lcd/Nt35510.cpp
     ${VERSION_FILE}
 )
 set_target_properties(daemon PROPERTIES OUTPUT_NAME pinballd)
-target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
-target_link_libraries(daemon PRIVATE plog::plog)
+target_include_directories(daemon PRIVATE src/daemon ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(daemon PRIVATE plog::plog fmt::fmt)
 
 target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS})
 target_link_libraries(daemon PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES})

@@ -36,14 +36,8 @@ static void InitLog(const plog::Severity level, const bool simple) {
     }
 
     PLOG_VERBOSE << "Logging initialized - pinballd " << kVersion << " (" << kVersionGitHash << ")";
-}
 
-/**
- * @brief Initialize libevent
- *
- * Configure the log callback for libevent to use our existing logging machinery.
- */
-static void InitLibevent() {
+    // install libevent logging callback
     event_set_log_callback([](const auto severity, const auto msg) {
         switch(severity) {
             case EVENT_LOG_DEBUG:
@@ -146,7 +140,6 @@ int main(const int argc, char * const * argv) {
     // TODO: probe hardware and init drivers
 
     // set up and RPC main loop
-    InitLibevent();
 
     // clean up
 }
