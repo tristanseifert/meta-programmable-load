@@ -1,0 +1,25 @@
+From 21f1b25f915e97eb3673387c2d2b2dfa9ddad330 Mon Sep 17 00:00:00 2001
+From: Tristan Seifert <tristan@tseifert.me>
+Date: Mon, 20 Jun 2022 18:31:38 -0700
+Subject: [PATCH 2/2] add spidev compatible
+
+---
+ drivers/spi/spidev.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/spi/spidev.c b/drivers/spi/spidev.c
+index 1bd73e322b7b..493c0aff74c1 100644
+--- a/drivers/spi/spidev.c
++++ b/drivers/spi/spidev.c
+@@ -696,6 +696,7 @@ static const struct of_device_id spidev_dt_ids[] = {
+ 	{ .compatible = "menlo,m53cpld" },
+ 	{ .compatible = "cisco,spi-petra" },
+ 	{ .compatible = "micron,spi-authenta" },
++	{ .compatible = "trist,pl-front-panel" },
+ 	{},
+ };
+ MODULE_DEVICE_TABLE(of, spidev_dt_ids);
+-- 
+2.32.1 (Apple Git-133)
+
+

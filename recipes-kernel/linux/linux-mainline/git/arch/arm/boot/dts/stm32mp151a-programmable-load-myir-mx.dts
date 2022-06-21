@@ -1071,7 +1071,8 @@
     /* magnetic transducer (beeper) on main board */
     beeper {
         compatible = "pwm-beeper";
-        pwms = <&pwm2 0 1000000 0>;
+        // Ch4 pwm out
+        pwms = <&pwm2 3 800000 0>;
     };
 
     // front panel LCD backlight
@@ -1082,8 +1083,8 @@
         pwms = <&pwm4 1 250000 0>;
 
         // TODO: these need tuning, likely
-        brightness-levels = <0 2 4 8 16 32 64 128 255>;
-        default-brightness-level = <7>;
+        brightness-levels = <0 2 4 8 16 32 64 128 192 224 255>;
+        default-brightness-level = <9>;
 
         power-supply = <&vreg_3v3>;
     };
@@ -1173,7 +1174,7 @@
         ext-status {
             // label = "Status Bicolor";
             gpios = <&gpioz 6 GPIO_ACTIVE_HIGH>;
-            linux,default-trigger = "heartbeat";
+            linux,default-trigger = "activity";
         };
         // SoM status LED
         som-status {
@@ -1368,10 +1369,10 @@
     display-controller@1 {
         // chip select 1
         reg = <1>;
-        spi-max-frequency = <10000000>;
+        spi-max-frequency = <5000000>;
 
-        // TODO: what is the `compatible` for this?
-        compatible = "spidev";
+        // this depends on our modifications to the spi driver to add the compatible string
+        compatible =  "trist,pl-front-panel";
     };
 };
 
