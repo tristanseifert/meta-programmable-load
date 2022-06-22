@@ -1116,6 +1116,9 @@
         compatible = "eastrising,er-tft040-1", "simple-panel";
         label = "Front LCD";
 
+        // rotate lcd
+        rotation = <270>;
+
         /* associated backlight device (PWM driver) */
         backlight = <&panel_backlight>;
 

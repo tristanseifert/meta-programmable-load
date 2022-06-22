@@ -3,6 +3,7 @@
 #include <sys/ioctl.h>
 
 #ifdef __linux__
+#include <gpiod.h>
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 #endif
@@ -432,12 +433,20 @@ const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
             {0xc903, 0x50},
             {0xc904, 0x50},
 
+            // generate internal clock
+            {0xb300, 0x01},
+            // use pixel clock
+            //{0xb300, 0x00},
+
             // tearing effect only vblank
             {0x3500, 0x00},
             // data format: 24 bits
             {0x3a00, 0x77},
             // memory data access control
             {0x3600, 0x00},
+            // SRAM data input via PCLK/RGB bus
+            //{0x4a00, 0x00},
+            {0x4a00, 0x01},
         },
     },
 };
@@ -451,7 +460,7 @@ const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
  */
 Nt35510::Nt35510(const std::filesystem::path &spidevPath,
         const std::shared_ptr<Drivers::Gpio::GpioChip> &gpioChip, const size_t gpioLine) :
-    gpioChip(gpioChip), gpioLine(gpioLine) {
+    devPath(spidevPath), gpioChip(gpioChip), gpioLine(gpioLine) {
     int err;
 
     /*
@@ -462,10 +471,86 @@ Nt35510::Nt35510(const std::filesystem::path &spidevPath,
      * the constructor.
      */
 
-    // open SPI device and configure it
+    // test opening the SPI device
     PLOG_DEBUG << "Opening display at " << spidevPath.native();
+    this->openDevice();
 
-    this->dev = open(spidevPath.native().c_str(), O_RDWR);
+    //auto chip = gpiod_chip_open_by_name("gpiochip0");
+    auto chip = gpiod_chip_open_by_name("gpiochip2");
+    if(!chip) {
+        throw std::runtime_error("failed to open gpiochip");
+    }
+
+    //this->devCs = gpiod_chip_get_line(chip, 15);
+    this->devCs = gpiod_chip_get_line(chip, 8);
+    if(!this->devCs) {
+        throw std::runtime_error("failed to get gpio for /cs");
+    }
+
+    err = gpiod_line_request_output(this->devCs, "balls", 1);
+    if(err) {
+        PLOG_FATAL << "failed to set gpio line as output";
+    }
+
+    uint8_t balls;
+    this->regRead(0x0c00, balls);
+    PLOG_INFO << "pixel format pre reset: " << fmt::format("{:02x}", balls);
+
+    // configure the reset line and assert it
+    using PinMode = Drivers::Gpio::GpioChip;
+    this->gpioChip->configurePin(this->gpioLine, PinMode::OutputPushPull);
+
+    this->toggleReset();
+
+    this->regRead(0x0c00, balls);
+    PLOG_INFO << "pixel format post reset: " << fmt::format("{:02x}", balls);
+
+    // read display id
+    std::array<uint8_t, 3> displayId{};
+
+    this->regRead(0x0400, displayId[0]);
+    this->regRead(0x0401, displayId[1]);
+    this->regRead(0x0402, displayId[2]);
+    PLOG_INFO << "Display id 1: " << fmt::format("{:02x} {:02x} {:02x}", displayId[0], displayId[1],
+            displayId[2]);
+
+    this->regRead(0xDA00, displayId[0]);
+    this->regRead(0xDB00, displayId[1]);
+    this->regRead(0xDC00, displayId[2]);
+    PLOG_INFO << "Display id 2: " << fmt::format("{:02x} {:02x} {:02x}", displayId[0], displayId[1],
+            displayId[2]);
+
+    // apply initialization sequence and enable display
+    this->runInitSequence(gPanelData[0]);
+    this->enableDisplay();
+
+    // read display signal mode
+    this->regRead(0x0a00, displayId[0]);
+    PLOG_INFO << "power mode: " << fmt::format("{:02x}", displayId[0]);
+
+    this->regRead(0x0b00, displayId[0]);
+    PLOG_INFO << "DMADCTL: " << fmt::format("{:02x}", displayId[0]);
+
+    this->regRead(0x0c00, displayId[0]);
+    PLOG_INFO << "pixel format: " << fmt::format("{:02x}", displayId[0]);
+
+    this->regRead(0x0d00, displayId[0]);
+    PLOG_INFO << "display mode: " << fmt::format("{:02x}", displayId[0]);
+
+    this->regRead(0x0e00, displayId[0]);
+    PLOG_INFO << "signal mode: " << fmt::format("{:02x}", displayId[0]);
+
+    this->regRead(0x0f00, displayId[0]);
+    PLOG_INFO << "diagnostic state: " << fmt::format("{:02x}", displayId[0]);
+}
+
+/**
+ * @brief Open the SPI device
+ */
+void Nt35510::openDevice() {
+    int err;
+
+    this->dev = open(this->devPath.native().c_str(), O_RDWR);
     if(this->dev == -1) {
         throw std::system_error(errno, std::generic_category(), "Nt35510: open spidev");
     }
@@ -477,7 +562,7 @@ Nt35510::Nt35510(const std::filesystem::path &spidevPath,
     }
 
     // display is configured: rising trigger, clock starts low
-    uint8_t mode{SPI_MODE_3};
+    uint8_t mode{SPI_MODE_0};
     err = ioctl(this->dev, SPI_IOC_WR_MODE, &mode);
     if(err == -1) {
         throw std::system_error(errno, std::generic_category(), "Nt35510: set spidev mode");
@@ -490,16 +575,13 @@ Nt35510::Nt35510(const std::filesystem::path &spidevPath,
         throw std::system_error(errno, std::generic_category(), "Nt35510: set spidev bits per word");
     }
 #endif
+}
 
-    // configure the reset line and assert it
-    using PinMode = Drivers::Gpio::GpioChip;
-    this->gpioChip->configurePin(this->gpioLine, PinMode::OutputPushPull);
-
-    this->toggleReset();
-
-    // apply initialization sequence and enable display
-    this->runInitSequence(gPanelData[0]);
-    this->enableDisplay();
+void Nt35510::closeDevice() {
+    if(this->dev != -1) {
+        close(this->dev);
+        this->dev = -1;
+    }
 }
 
 /**
@@ -509,10 +591,7 @@ Nt35510::Nt35510(const std::filesystem::path &spidevPath,
  * and then release all resources.
  */
 Nt35510::~Nt35510() {
-    // close spidev
-    if(this->dev != -1) {
-        close(this->dev);
-    }
+    this->closeDevice();
 }
 
 /**
@@ -532,7 +611,7 @@ void Nt35510::runInitSequence(const PanelData &data) {
 void Nt35510::enableDisplay() {
     // start up (turn off sleep mode)
     this->regWrite(0x1100);
-    usleep(120 * 1000);
+    usleep(125 * 1000);
 
     // display on
     this->regWrite(0x2900);
@@ -573,45 +652,16 @@ void Nt35510::regWrite(const uint16_t address, std::optional<const uint8_t> valu
         PLOG_DEBUG << "<< " << fmt::format("cmd {:04x}", address);
     }
 
-    using Buffer = std::array<uint8_t, 2>;
-    std::array<Buffer, 3> txBuffers;
-    std::array<struct spi_ioc_transfer, 3> txns{};
-
-    for(size_t i = 0; i < txns.size(); i++) {
-        auto &txn = txns[i];
-        memset(&txn, 0, sizeof(txn));
-
-        txn.cs_change = true;
-        txn.len = 2;
-
-        txn.tx_buf = reinterpret_cast<uintptr_t>(txBuffers[i].data());
-        std::fill(txBuffers[i].begin(), txBuffers[i].end(), 0);
-    }
-
-    // write high byte of the address
-    txBuffers[0][0] = 0b00100000; // R/W = 0, D/C = 0, H/L = 1
-    txBuffers[0][1] = ((address & 0xFF00) >> 8);
-
+    // write the register address
+    this->writeWord(false, false, true, ((address & 0xFF00) >> 8));
     // PLOG_VERBOSE << "write0: " << fmt::format("{:02x} {:02x}", txBuffers[0][0], txBuffers[0][1]);
 
-    // write the low byte of the address
-    txBuffers[1][0] = 0b00000000; // R/W = 0, D/C = 0, H/L = 0
-    txBuffers[1][1] = (address & 0xFF);
+    this->writeWord(false, false, false, (address & 0x00FF));
     // PLOG_VERBOSE << "write1: " << fmt::format("{:02x} {:02x}", txBuffers[1][0], txBuffers[1][1]);
 
     // write data
     if(value) {
-        txBuffers[2][0] = 0b0100000; // R/W = 0, D/C = 1, H/L = 0
-        txBuffers[2][1] = *value;
-    }
-
-    // perform transactions
-    const size_t numTxn{value ? txns.size() : (txns.size() - 1)};
-    PLOG_VERBOSE << "nTxn = " << numTxn;
-
-    int err = ioctl(this->dev, SPI_IOC_MESSAGE(numTxn), txns.data());
-    if(err == -1) {
-        throw std::system_error(errno, std::generic_category(), "Nt35510: read register");
+        this->writeWord(false, true, false, *value);
     }
 }
 
@@ -625,48 +675,88 @@ void Nt35510::regWrite(const uint16_t address, std::optional<const uint8_t> valu
 void Nt35510::regRead(const uint16_t address, uint8_t &outValue) {
     PLOG_DEBUG << ">> " << fmt::format("reg {:04x}", address);
 
-    using Buffer = std::array<uint8_t, 2>;
-    std::array<Buffer, 3> txBuffers;
-    Buffer rxBuffer;
-
-    std::array<struct spi_ioc_transfer, 3> txns{};
-
-    for(size_t i = 0; i < txns.size(); i++) {
-        auto &txn = txns[i];
-        memset(&txn, 0, sizeof(txn));
-
-        txn.cs_change = true;
-        txn.len = 2;
-
-        txn.tx_buf = reinterpret_cast<uintptr_t>(txBuffers[i].data());
-        std::fill(txBuffers[i].begin(), txBuffers[i].end(), 0);
-    }
-
-    // write high byte of the address
-    txBuffers[0][0] = 0b00100000; // R/W = 0, D/C = 0, H/L = 1
-    txBuffers[0][1] = ((address & 0xFF00) >> 8);
-
+    // write the register address
+    this->writeWord(false, false, true, ((address & 0xFF00) >> 8));
     // PLOG_VERBOSE << "write0: " << fmt::format("{:02x} {:02x}", txBuffers[0][0], txBuffers[0][1]);
 
-    // write the low byte of the address
-    txBuffers[1][0] = 0b00000000; // R/W = 0, D/C = 0, H/L = 0
-    txBuffers[1][1] = (address & 0xFF);
+    this->writeWord(false, false, false, (address & 0x00FF));
     // PLOG_VERBOSE << "write1: " << fmt::format("{:02x} {:02x}", txBuffers[1][0], txBuffers[1][1]);
 
     // read out the byte
-    txBuffers[2][0] = 0b1100000; // R/W = 1, D/C = 1, H/L = 0
+    const auto temp = this->writeWord(true, true, false);
+    outValue = temp;
+}
 
-    txns[2].rx_buf = reinterpret_cast<uintptr_t>(rxBuffer.data());
-    // PLOG_VERBOSE << "write2: " << fmt::format("{:02x} {:02x}", txBuffers[2][0], txBuffers[2][1]);
+/**
+ * @brief Write a word to the display controller
+ *
+ * This performs a two byte SPI transaction (manging the chip selects manually) to the display.
+ *
+ * @return Data received during the second byte phase
+ */
+uint8_t Nt35510::writeWord(const bool rw, const bool dc, const bool upper, const uint8_t payload) {
+    int err;
+    std::array<uint8_t, 2> rxBuffer, txBuffer;
 
-    // perform the transaction
-    int err = ioctl(this->dev, SPI_IOC_MESSAGE(txns.size()), txns.data());
-    if(err == -1) {
-        throw std::system_error(errno, std::generic_category(), "Nt35510: read register");
+    std::fill(rxBuffer.begin(), rxBuffer.end(), 0);
+
+    // prepare tx buffer
+    txBuffer[0] = (rw ? (1 << 7) : 0) | (dc ? (1 << 6) : 0) | (upper ? (1 << 5) : 0);
+    txBuffer[1] = payload;
+
+    /*
+    // prepare spi transaction
+    struct spi_ioc_transfer txn;
+    memset(&txn, 0, sizeof(txn));
+
+    txn.len = 2;
+    txn.tx_buf = reinterpret_cast<uintptr_t>(txBuffer.data());
+    txn.rx_buf = reinterpret_cast<uintptr_t>(rxBuffer.data());
+*/
+
+    // assert CS
+    gpiod_line_set_value(this->devCs, 0);
+
+    // do txn
+    //err = ioctl(this->dev, SPI_IOC_MESSAGE(1), &txn);
+    // write two bytes
+    if(!rw) {
+        err = write(this->dev, txBuffer.data(), 2);
+        if(err == -1) {
+            throw std::system_error(errno, std::generic_category(),
+                fmt::format("Nt35510: tx word ({} {} {} {:02x})", rw ? "write" : "read",
+                    dc ? "data" : "command", upper ? "upper" : "lower", payload));
+        }
+    } else {
+        // write byte (command)
+        err = write(this->dev, txBuffer.data(), 1);
+        if(err == -1) {
+            throw std::system_error(errno, std::generic_category(),
+                fmt::format("Nt35510: tx word 1/1 ({} {} {} {:02x})", rw ? "write" : "read",
+                    dc ? "data" : "command", upper ? "upper" : "lower", payload));
+        }
+
+        // read byte
+        err = read(this->dev, rxBuffer.data(), 1);
+        if(err == -1) {
+            throw std::system_error(errno, std::generic_category(),
+                fmt::format("Nt35510: tx word 2/2 ({} {} {} {:02x})", rw ? "write" : "read",
+                    dc ? "data" : "command", upper ? "upper" : "lower", payload));
+        }
     }
 
-    // copy out the received byte
-    outValue = rxBuffer[1];
-    // PLOG_VERBOSE << "rx: " << fmt::format("{:02x} {:02x}", rxBuffer[0], rxBuffer[1]);
+
+    // deassert CS, and handle error of transaction
+    gpiod_line_set_value(this->devCs, 1);
+
+    if(err == -1) {
+        throw std::system_error(errno, std::generic_category(),
+                fmt::format("Nt35510: tx word ({} {} {} {:02x})", rw ? "write" : "read",
+                    dc ? "data" : "command", upper ? "upper" : "lower", payload));
+    }
+
+    // return the received byte
+    return rxBuffer[0];
 }
+
 

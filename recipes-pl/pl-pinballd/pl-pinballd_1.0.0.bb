@@ -2,7 +2,7 @@ SUMMARY = "Programmable load HMI daemon"
 LICENSE = "ISC"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/ISC;md5=f3b90e78ea0cffb20bf5cca7947a896d"
 PR = "r0"
-DEPENDS = "pl-app-meta libcbor systemd git libevent i2c-tools"
+DEPENDS = "pl-app-meta libcbor systemd git libevent i2c-tools libgpiod"
 RDEPENDS:${PN} = "libsystemd"
 
 # define the CMake source directories
