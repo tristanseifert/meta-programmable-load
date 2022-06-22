@@ -885,6 +885,14 @@
 	/* USER CODE END rcc */
 };
 
+&crc1 {
+	status = "okay";
+};
+
+&hash1 {
+	status = "okay";
+};
+
 &rng1{
 	status = "okay";
 
@@ -937,6 +945,19 @@
 	status = "okay";
 
 	/* USER CODE BEGIN tamp */
+        // how we reboot is specified by a boot/tamper register
+        reboot-mode {
+            compatible = "syscon-reboot-mode";
+            offset = <0x150>; /* reg20 */
+            mask = <0xff>;
+            mode-normal = <0>;
+            mode-fastboot = <0x1>;
+            mode-recovery = <0x2>;
+            mode-stm32cubeprogrammer = <0x3>;
+            mode-ums_mmc0 = <0x10>;
+            mode-ums_mmc1 = <0x11>;
+            mode-ums_mmc2 = <0x12>;
+        };
 	/* USER CODE END tamp */
 };
 
@@ -1004,14 +1025,14 @@
 	/* USER CODE END usbh_ehci */
 };
 
-/*&usbh_ohci{
+&usbh_ohci{
 	status = "okay";
 
 	// USER CODE BEGIN usbh_ohci
         phys = <&usbphyc_port0>;
         phy-names = "usb";
 	// USER CODE END usbh_ohci
-};*/
+};
 
 &usbotg_hs{
 	u-boot,dm-pre-reloc;
@@ -1092,14 +1113,8 @@
     /* front LCD panel */
     front_lcd: panel {
         status = "okay";
-        // TODO: we should use a proper panel definition (likely means patching panel-simple.c)
-        compatible = "foxlink,fl500wvr00-a0t", "simple-panel";
+        compatible = "eastrising,er-tft040-1", "simple-panel";
         label = "Front LCD";
-
-        /* physical dimensions and rotation */
-        width-mm = <86>;
-        height-mm = <52>;
-        rotation = <90>;
 
         /* associated backlight device (PWM driver) */
         backlight = <&panel_backlight>;
@@ -1116,32 +1131,6 @@
             panel_rgb_in: endpoint {
                 remote_endpoint = <&ltdc_ep0_out>;
             };
-        };
-
-        /* panel display timing for 480 x 800 mode */
-        /* TODO: check these timings, they're probably fucked */
-        /* refresh rate = (25000000/1)/((3 + 2 + 480 + 5)*(41 + 2 + 800 + 7)) ≅ 60 Hz */
-        panel-timing {
-            /* pixel clock */
-            clock-frequency = <25000000>; /* 25 MHz */
-
-            /* horizontal timings */
-            hactive = <480>;
-            hfront-porch = <3>;
-            hsync-len = <2>;
-            hback-porch = <5>;
-
-            /* vertical timings */
-            vactive = <800>;
-            vfront-porch = <41>;
-            vsync-len = <2>;
-            vback-porch = <7>;
-
-            /* polarities of signals */
-            hsync-active = <0>; /* low */
-            vsync-active = <0>; /* low */
-            de-active = <1>; /* high */
-            pixelclk-active = <1>; /* high */
         };
     };
 

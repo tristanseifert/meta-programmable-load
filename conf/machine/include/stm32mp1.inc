@@ -54,9 +54,12 @@ IMAGE_INSTALL:append = " \
     open-amp \
 "
 
+# u-boot support
+IMAGE_INSTALL:append = " libubootenv libubootenv-bin "
+
 # various generally useful libraries
 IMAGE_INSTALL:append = " \
-    libjpeg-turbo libpng libubootenv libusb1 libsocketcan \
+    libjpeg-turbo libpng libusb1 libsocketcan \
 "
 
 # UI libraries
