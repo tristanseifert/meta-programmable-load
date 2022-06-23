@@ -1,6 +1,7 @@
 #ifndef SPLASH_FBSURFACE_H
 #define SPLASH_FBSURFACE_H
 
+#include <cmath>
 #include <cstdio>
 #include <stdexcept>
 #include <string_view>
@@ -19,8 +20,6 @@
  *
  * This handles opening a framebuffer and mapping it as a Cairo surface, so that we can do drawing
  * on it with Cairo. It also establishes a Cairo context for the surface.
- *
- * @remark The surface is translated so that the coordinate space is always in the range of [0, 1].
  */
 class FbSurface {
     public:
@@ -72,9 +71,29 @@ class FbSurface {
                 throw std::runtime_error(cairo_status_to_string(cairo_status(this->ctx)));
             }
 
-            // scale the context such that coordinates are [0, 1]
-            cairo_scale(this->ctx, static_cast<double>(this->info.xres),
-                     static_cast<double>(this->info.yres));
+            // rotate it to fit 
+            // XXX: hardcode it (fbdev broken?)
+            this->info.rotate = FB_ROTATE_CCW;
+
+            switch(this->info.rotate) {
+                // 90°
+                case FB_ROTATE_CW:
+                    cairo_rotate(this->ctx, M_PI_2);
+                    break;
+                // 180°
+                case FB_ROTATE_UD:
+                    cairo_rotate(this->ctx, M_PI);
+                    break;
+                // 270°
+                case FB_ROTATE_CCW:
+                    cairo_rotate(this->ctx, -M_PI_2);
+                    break;
+                // no rotation by default
+                default:
+                    break;
+            }
+            // flip X axis
+            cairo_translate(this->ctx, -800, 0);
         }
 
         /**
@@ -127,8 +146,7 @@ class FbSurface {
          */
         void clear(const double r, const double g, const double b) {
             cairo_set_source_rgb(this->ctx, r, g, b);
-            cairo_rectangle(this->ctx, 0, 0, 1, 1);
-            cairo_fill(this->ctx);
+            cairo_paint(this->ctx);
 
             cairo_surface_flush(this->surface);
         }
@@ -137,18 +155,24 @@ class FbSurface {
          * @brief Translate height to user coordinate space
          */
         inline double translateHeight(const double in) const {
+            return in;
+            /*
             double temp{in}, unused{0};
             cairo_device_to_user_distance(this->ctx, &unused, &temp);
             return temp;
+            */
         }
 
         /**
          * @brief Translate line width to user coordinate space
          */
         inline double translateWidth(const double in) const {
+            return in;
+            /*
             double temp{in}, unused{0};
             cairo_device_to_user_distance(this->ctx, &temp, &unused);
             return temp;
+            */
         }
 
     private:

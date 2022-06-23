@@ -12,6 +12,22 @@ static inline void SetSourceColor(cairo_t *ctx, const Drawer::Color &color) {
     cairo_set_source_rgb(ctx, std::get<0>(color), std::get<1>(color), std::get<2>(color));
 }
 
+/**
+ * @brief Initialize drawer for the given surface
+ */
+Drawer::Drawer(FbSurface &surface) : surface(surface) {
+    this->loadFonts();
+
+    // create background gradient
+    auto pattern = cairo_pattern_create_linear(kScreenWidth / 2., 16.,
+            kScreenWidth / 2., kScreenHeight - 32.);
+
+    cairo_pattern_add_color_stop_rgb(pattern, 0, 0, 0, 0);
+    cairo_pattern_add_color_stop_rgb(pattern, 1, 0, 0, 0.33);
+
+    this->bgPattern = pattern;
+}
+
 
 /**
  * @brief Release all resources.
@@ -23,6 +39,9 @@ Drawer::~Drawer() {
     pango_font_description_free(this->progressStringFont);
     pango_font_description_free(this->bannerFont);
     pango_font_description_free(this->versionFont);
+
+    // clean up patterns
+    cairo_pattern_destroy(this->bgPattern);
 }
 
 /**
@@ -33,18 +52,9 @@ Drawer::~Drawer() {
 void Drawer::drawBackground() {
     auto ctx = this->surface.getContext();
 
-    // create gradient
-    auto pattern = cairo_pattern_create_linear(0.5, 0.1, 0.5, 0.9);
-
-    cairo_pattern_add_color_stop_rgb(pattern, 0, 0, 0, 0);
-    cairo_pattern_add_color_stop_rgb(pattern, 1, 0, 0, 0.2);
-
     // fill with it
-    cairo_set_source(ctx, pattern);
+    cairo_set_source(ctx, this->bgPattern);
     cairo_paint(ctx);
-
-    // clean up
-    cairo_pattern_destroy(pattern);
 }
 
 /**
@@ -55,14 +65,14 @@ void Drawer::drawBanner() {
 
     // establish clipping rect (XXX: don't hardcode line height) and fill background
     cairo_save(ctx);
-    cairo_rectangle(ctx, 0, kBannerTextY, 1, this->surface.translateHeight(48));
+    cairo_rectangle(ctx, 0, kBannerTextY, kScreenWidth, this->surface.translateHeight(74));
     cairo_clip(ctx);
 
     this->drawBackground();
 
     // draw text
     SetSourceColor(ctx, kBannerTextColor);
-    cairo_move_to(ctx, 0.5, kBannerTextY);
+    cairo_move_to(ctx, kScreenWidth / 2., kBannerTextY);
 
     this->renderText(this->banner, this->bannerFont, TextAlignment::Center);
 
@@ -78,7 +88,7 @@ void Drawer::drawProgressBar() {
     auto ctx = this->surface.getContext();
     const auto clampedProgress = std::max(0., std::min(1., this->progress));
 
-    constexpr static const auto barX{(1.0 - kProgressBarWidth) / 2.};
+    constexpr static const auto barX{(kScreenWidth - kProgressBarWidth) / 2.};
 
     // draw background (filled)
     if(this->progress > 0) {
@@ -101,7 +111,7 @@ void Drawer::drawProgressBar() {
     cairo_rectangle(ctx, barX, kProgressBarY, kProgressBarWidth,
             this->surface.translateHeight(kProgressBarHeight));
 
-    cairo_set_line_width(ctx, this->surface.translateHeight(kProgressStrokeWidth));
+    cairo_set_line_width(ctx, kProgressStrokeWidth);
     SetSourceColor(ctx, kProgressStrokeColor);
 
     cairo_stroke(ctx);
@@ -114,20 +124,22 @@ void Drawer::drawProgressBar() {
  * provide additional information about the current phase of boot.
  */
 void Drawer::drawProgressString() {
-    const auto kProgressTextY{kProgressBarY - this->surface.translateHeight(30)};
+    const auto kProgressTextY{kProgressBarY - 44};
     auto ctx = this->surface.getContext();
 
     // establish clipping rect (XXX: don't hardcode line height) and fill background
     cairo_save(ctx);
-    cairo_rectangle(ctx, 0, kProgressTextY, 1, this->surface.translateHeight(26));
+    cairo_rectangle(ctx, 0, kProgressTextY, kScreenWidth, 40);
     cairo_clip(ctx);
 
     this->drawBackground();
+    cairo_paint(ctx);
+
 
     // draw string
     SetSourceColor(ctx, kProgressTextColor);
 
-    cairo_move_to(ctx, 0.5, kProgressTextY);
+    cairo_move_to(ctx, kScreenWidth/2., kProgressTextY);
     this->renderText(this->progressString, this->progressStringFont, TextAlignment::Center);
 
     cairo_restore(ctx);
@@ -138,11 +150,11 @@ void Drawer::drawProgressString() {
  */
 void Drawer::drawVersionStrings() {
     auto ctx = this->surface.getContext();
-    constexpr static const auto kX{(1.0 - kProgressBarWidth) / 2.};
+    constexpr static const auto kX{(kScreenWidth - kProgressBarWidth) / 2.};
 
     // establish clipping rect (XXX: don't hardcode line height) and fill background
     cairo_save(ctx);
-    cairo_rectangle(ctx, kX, kVersionTextY, kProgressBarWidth, 1. - kVersionTextY);
+    cairo_rectangle(ctx, kX, kVersionTextY, kProgressBarWidth, kScreenHeight - kVersionTextY);
     cairo_clip(ctx);
 
     this->drawBackground();
@@ -175,9 +187,9 @@ void Drawer::loadFonts() {
     this->textLayout = pango_cairo_create_layout(this->surface.getContext());
 
     // get font descriptions
-    this->bannerFont = pango_font_description_from_string("DINishExpanded Bold 32");
-    this->progressStringFont = pango_font_description_from_string("Liberation Sans Italic 16");
-    this->versionFont = pango_font_description_from_string("Liberation Sans Regular 11");
+    this->bannerFont = pango_font_description_from_string("DINishExpanded Bold 50");
+    this->progressStringFont = pango_font_description_from_string("Liberation Sans Italic 25");
+    this->versionFont = pango_font_description_from_string("Liberation Sans Regular 12");
 }
 
 /**
@@ -194,10 +206,7 @@ void Drawer::renderText(const std::string_view &str, PangoFontDescription *font,
         const TextAlignment align) {
     auto ctx = this->surface.getContext();
 
-    // reset the scale transform (this fucks with font rendering real bad; but kinda hacky)
     cairo_save(ctx);
-    cairo_scale(ctx, 1. / static_cast<double>(this->surface.getFbWidth()),
-            1. / static_cast<double>(this->surface.getFbHeight()));
 
     int width, height;
 
