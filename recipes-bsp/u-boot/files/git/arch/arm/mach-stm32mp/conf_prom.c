@@ -97,8 +97,7 @@ int pl_read_prom(void) {
 
     ret = env_set("serial#", gDeviceSerial);
     if(ret) {
-        // this is not a fatal error
-        printf("%s failed!\n", "env_set");
+        // TODO: check if the serial numbers differ
     }
 
     // read MAC address and save in environment
@@ -109,10 +108,7 @@ int pl_read_prom(void) {
     }
 
     ret = eth_env_set_enetaddr("ethaddr", gMacAddress);
-    if(ret) {
-        // this is not a fatal error
-        printf("%s failed!\n", "eth_env_set_enetaddr");
-    }
+    (void) ret; // ignore errors here
 
     // we've read all data, so skip this routine next time
     gPromRead = true;
