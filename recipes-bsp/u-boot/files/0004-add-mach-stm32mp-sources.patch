@@ -1,13 +1,13 @@
-From 29433b48b606f673f2f32b59836d27c55f0b1d7b Mon Sep 17 00:00:00 2001
+From fa2cdc0f68c8087cfdd12a675c6d63da55a3d767 Mon Sep 17 00:00:00 2001
 From: Tristan Seifert <tristan@tseifert.me>
 Date: Sun, 19 Jun 2022 12:18:02 -0700
-Subject: [PATCH 4/4] added board-specific sources
+Subject: [PATCH] added board-specific sources
 
 ---
  arch/arm/mach-stm32mp/Makefile                |  1 +
  arch/arm/mach-stm32mp/cpu.c                   | 85 +++----------------
  .../arm/mach-stm32mp/include/mach/sys_proto.h |  2 -
- 3 files changed, 24 insertions(+), 77 deletions(-)
+ 3 files changed, 12 insertions(+), 76 deletions(-)
 
 diff --git a/arch/arm/mach-stm32mp/Makefile b/arch/arm/mach-stm32mp/Makefile
 index 391b47cf13..618e04699e 100644
@@ -145,8 +145,3 @@ index b91f98eb45..003fc1e617 100644
 -
  /* board power management : configure vddcore according OPP */
  void board_vddcore_init(u32 voltage_mv);
-
--- 
-2.32.1 (Apple Git-133)
-
-

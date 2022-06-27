@@ -1,28 +1,26 @@
-From c4f3ab76856751c7a879a8625d9cca65d22c9caf Mon Sep 17 00:00:00 2001
+From f8b991c2aa3db15e9589cd0d19f7b77f3b325abb Mon Sep 17 00:00:00 2001
 From: Tristan Seifert <tristan@tseifert.me>
-Date: Fri, 17 Jun 2022 17:26:23 -0700
+Date: Mon, 27 Jun 2022 17:26:23 -0700
 Subject: [PATCH] compile device tree
 
 Ensure that the device tree for the progrmamable load boards gets compiled
 as part of the u-boot build.
 
 ---
- arch/arm/dts/Makefile             | 3 ++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ arch/arm/dts/Makefile | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index 0a2713c06a..e2d9174612 100644
+index 5caedf7bd3..54a8ea8349 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -1172,7 +1172,8 @@ dtb-$(CONFIG_STM32MP15x) += \
- 	stm32mp15xx-dhcom-drc02.dtb \
+@@ -1174,7 +1174,8 @@ dtb-$(CONFIG_STM32MP15x) += \
  	stm32mp15xx-dhcom-pdk2.dtb \
  	stm32mp15xx-dhcom-picoitx.dtb \
--	stm32mp15xx-dhcor-avenger96.dtb
-+	stm32mp15xx-dhcor-avenger96.dtb \
+ 	stm32mp15xx-dhcor-avenger96.dtb \
+-	stm32mp15xx-dhcor-drc-compact.dtb
++	stm32mp15xx-dhcor-drc-compact.dtb \
 +	stm32mp151a-programmable-load-myir-mx.dtb
-
+ 
  dtb-$(CONFIG_SOC_K3_AM6) += \
  	k3-am654-base-board.dtb \
---
-2.32.1 (Apple Git-133)

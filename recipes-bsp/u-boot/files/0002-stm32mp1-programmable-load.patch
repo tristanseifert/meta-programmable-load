@@ -1,4 +1,4 @@
-From baa2a2dae77055b8e4432a1e99a8e4fd5a0dcd45 Mon Sep 17 00:00:00 2001
+From 5436e94ad0a70dd45b7127397d9de7500b29293b Mon Sep 17 00:00:00 2001
 From: Tristan Seifert <tristan@tseifert.me>
 Date: Fri, 3 Jun 2022 18:41:32 -0700
 Subject: [PATCH] stm32mp1 config stuff
@@ -129,11 +129,3 @@ index 1b1c255b98..1c097f7279 100644
 +# disable some boot commands
 +CONFIG_BOOTM_VXWORKS=n
 +CONFIG_CMD_BOOTEFI=n
-+
-+# hardware drivers
-+CONFIG_I2C_MUX=y
-+CONFIG_I2C_MUX_PCA954x=y
--- 
-2.32.1 (Apple Git-133)
-
-
