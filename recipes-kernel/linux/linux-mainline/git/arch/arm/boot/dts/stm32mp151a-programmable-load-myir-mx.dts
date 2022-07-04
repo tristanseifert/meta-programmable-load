@@ -45,12 +45,37 @@
 		ranges;
 
 		/* USER CODE BEGIN reserved-memory */
+                /**
+                 * There is a fair bit of SRAM inside the SoC, most of which is dedicated to the
+                 * embedded firmware (M4 core) side. These memories are provided by the MCURAM
+                 * and RETRAM peripherals as follows:
+                 *
+                 * |---------| Size | M4 Address | A7 Address |
+                 * | MCURAM1 | 128K | 0x10000000 | 0x10000000 |
+                 * | MCURAM2 | 128K | 0x10020000 | 0x10020000 |
+                 * | MCURAM3 |  64K | 0x10040000 | 0x10040000 |
+                 * | MCURAM4 |  64K | 0x10050000 | 0x10050000 |
+                 * | RETRAM  |  64K | 0x00000000 | 0x38000000 |
+                 *
+                 * Most of this memory is dedicated to the embedded formware: MCURAM1/2 are used
+                 * for the data segment/heap, MCURAM3 contains IPC buffers. RETRAM is reserved to
+                 * hold the vector table and actual .text segment of the firmware.
+                 *
+                 * For the A7/Linux side, MCURAM4 is used for DMA chaining buffers.
+                 */
+                // these refer to the same memory region, just at two different addresses
+                mcuram: mcuram@30000000 {
+                    compatible = "shared-dma-pool";
+                    reg = <0x30000000 0x40000>;
+                    no-map;
+                };
                 mcuram2: mcuram2@10000000 {
                     compatible = "shared-dma-pool";
                     reg = <0x10000000 0x40000>;
                     no-map;
                 };
 
+                // define vdev0 memory (in MCURAM3) for IPC
                 vdev0vring0: vdev0vring0@10040000 {
                     compatible = "shared-dma-pool";
                     reg = <0x10040000 0x1000>;
@@ -65,16 +90,11 @@
 
                 vdev0buffer: vdev0buffer@10042000 {
                     compatible = "shared-dma-pool";
-                    reg = <0x10042000 0x4000>;
+                    reg = <0x10042000 0x8000>;
                     no-map;
                 };
 
-                mcuram: mcuram@30000000 {
-                    compatible = "shared-dma-pool";
-                    reg = <0x30000000 0x40000>;
-                    no-map;
-                };
-
+                // RETRAM - 64K, used for firmware code
                 retram: retram@38000000 {
                     compatible = "shared-dma-pool";
                     reg = <0x38000000 0x10000>;
@@ -510,15 +530,20 @@
 	status = "okay";
 
 	/* USER CODE BEGIN m4_rproc */
+        // required memory regions: SRAMs for storing code/data; vdev buffers for IPC
         memory-region = <&retram>, <&mcuram>, <&mcuram2>, <&vdev0vring0>,
                         <&vdev0vring1>, <&vdev0buffer>;
+        // mailbox channels exposed by the chip
         mboxes = <&ipcc 0>, <&ipcc 1>, <&ipcc 2>;
         mbox-names = "vq0", "vq1", "shutdown";
+
+        // TODO: use appropriate constants for irq config?
         interrupt-parent = <&exti>;
         interrupts = <68 1>;
         wakeup-source;
 	/* USER CODE END m4_rproc */
 
+        // XXX: this isn't used with the non-ST distribution?
 	m4_system_resources{
 		status = "okay";
 
@@ -546,9 +571,8 @@
 	/* USER CODE END dma1 */
 };
 
+// DMA2 is used by the cortex M4
 &dma2{
-	status = "okay";
-
 	/* USER CODE BEGIN dma2 */
 	/* USER CODE END dma2 */
 };

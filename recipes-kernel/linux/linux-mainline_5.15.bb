@@ -13,4 +13,7 @@ SRC_URI = " \
     file://0002-add-custom-lcd-panel.patch \
     file://filesystems.cfg \
     file://less-drivers.cfg \
+    file://base.cfg \
+    file://stm32mp1.cfg \
+    file://programmable-load-rev3.cfg \
 "
