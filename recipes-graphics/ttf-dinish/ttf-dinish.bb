@@ -43,8 +43,12 @@ PACKAGES = "${PN}"
 FONT_PACKAGES = "${PN}"
 
 # define the files we secreted
-FILES:${PN} = "${datadir}/fonts/truetype/DinishCondensed*.ttf \
+FILES:${PN} = "\
+    ${datadir}/fonts \
+    ${datadir}/fonts/truetype \
+    ${datadir}/fonts/truetype/DinishCondensed*.ttf \
     ${datadir}/fonts/truetype/DinishExpanded*.ttf \
     ${datadir}/fonts/truetype/Dinish-*.ttf \
+    ${datadir}/doc \
     ${datadir}/doc/ttf-dinish/* \
 "

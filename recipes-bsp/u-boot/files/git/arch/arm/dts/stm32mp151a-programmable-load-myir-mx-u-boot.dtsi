@@ -397,5 +397,58 @@
     u-boot,dm-spl;
     u-boot,dm-pre-reloc;
 };
+
+// display controller
+&ltdc_pins_mx {
+    u-boot,dm-spl;
+    u-boot,dm-pre-reloc;
+    pins1 {
+        u-boot,dm-spl;
+        u-boot,dm-pre-reloc;
+    };
+    pins2 {
+        u-boot,dm-spl;
+        u-boot,dm-pre-reloc;
+    };
+};
+&ltdc_sleep_pins_mx {
+    u-boot,dm-spl;
+    u-boot,dm-pre-reloc;
+    pins {
+        u-boot,dm-spl;
+        u-boot,dm-pre-reloc;
+    };
+};
+
+&ltdc {
+    u-boot,dm-spl;
+    u-boot,dm-pre-reloc;
+
+    port {
+        u-boot,dm-spl;
+        u-boot,dm-pre-reloc;
+
+        endpoint@0 {
+            u-boot,dm-spl;
+            u-boot,dm-pre-reloc;
+        };
+    };
+};
+
+// LCD panel
+&front_lcd {
+    u-boot,dm-spl;
+    u-boot,dm-pre-reloc;
+
+    port {
+        u-boot,dm-spl;
+        u-boot,dm-pre-reloc;
+
+        endpoint@0 {
+            u-boot,dm-spl;
+            u-boot,dm-pre-reloc;
+        };
+    };
+};
 /* USER CODE END addons */
 

@@ -79,8 +79,6 @@ int splash_disconnect() {
  * Send an "update progress" message
  */
 int splash_update_progress(const double percent) {
-    int err;
-
     // prepare message
     splash_rpc_message_t msg;
     memset(&msg, 0, sizeof(msg));
@@ -96,8 +94,6 @@ int splash_update_progress(const double percent) {
  * Send an "update progress string" message
  */
 int splash_update_message(const char *str) {
-    int err;
-
     // prepare message
     splash_rpc_message_t msg;
     memset(&msg, 0, sizeof(msg));

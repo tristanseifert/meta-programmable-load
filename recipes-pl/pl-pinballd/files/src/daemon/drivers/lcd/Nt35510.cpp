@@ -23,10 +23,10 @@
 using namespace Drivers::Lcd;
 
 const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
-    {
-        "ER-TFT040-1",
-        {
-            // some sort of magic (35510h) from example code
+    {{
+        .name = "ER-TFT040-1",
+        .initRegs = {
+            // enable manufacturer command set (page 1)
             {0xf000, 0x55},
             {0xf001, 0xaa},
             {0xf002, 0x52},
@@ -82,6 +82,7 @@ const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
             // VCOM = -1.325V
             {0xbe00, 0x00},
             {0xbe01, 0x89}, // 69 (?)
+
             // gamma setting
 {0xD100, 0x00},
 {0xD101, 0x2D},
@@ -401,16 +402,18 @@ const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
 {0xD632, 0x03},
 {0xD633, 0x7F},
 
-            // LV2 page 0 enable
+
+            // enable manufacturer command set, page 0
             {0xf000, 0x55},
             {0xf001, 0xaa},
             {0xf002, 0x52},
             {0xf003, 0x08},
             {0xf004, 0x00},
+
             // display control
             {0xb100, 0xcc},
             {0xb101, 0x00},
-            // select IPS (0x6b) vs TN (0x50)
+            // set resolution 480x800 (demo: IPS (0x6b) vs TN (0x50))
             {0xb500, 0x50},
             // source hold time
             {0xb600, 0x05},
@@ -434,9 +437,16 @@ const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
             {0xc904, 0x50},
 
             // generate internal clock
-            {0xb300, 0x01},
-            // use pixel clock
-            //{0xb300, 0x00},
+            //{0xb300, 0x01},
+            // use external pixel clock
+            {0xb300, 0x00},
+
+ /*           // LV2 page 0 disable
+            {0xf000, 0x55},
+            {0xf001, 0xaa},
+            {0xf002, 0x52},
+            {0xf003, 0x00},
+            {0xf004, 0x00},*/
 
             // tearing effect only vblank
             {0x3500, 0x00},
@@ -448,7 +458,7 @@ const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
             //{0x4a00, 0x00},
             {0x4a00, 0x01},
         },
-    },
+    }},
 };
 
 

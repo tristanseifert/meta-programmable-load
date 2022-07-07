@@ -27,6 +27,5 @@ USERADD_PACKAGES = "${PN}"
 GROUPADD_PARAM:${PN} = "-g 7420 load"
 
 USERADD_PARAM:${PN} = "-u 6900 -d /persistent/appdata/ui -s /bin/false -g load load-ui;\
-    -u 6901 -d /persistent/appdata/remote -s /bin/false -g load load-remote;\
     -u 6902 -d /persistent/appdata/control -s /bin/false -g load load-fw\
 "
