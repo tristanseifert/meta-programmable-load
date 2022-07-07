@@ -11,7 +11,7 @@ default = "deny"
 
 # embedded controller arbiter
 [[access.allow]]
-user = "load-fw"
+user = "loadd"
 paths = [
     "fw.*"
 ]

@@ -97,4 +97,4 @@ IMAGE_INSTALL:append = " pl-app-meta pl-confd"
 # real-time control firmware
 
 # user interface and remote
-IMAGE_INSTALL:append = " pl-pinballd"
+IMAGE_INSTALL:append = " pl-loadd pl-pinballd"

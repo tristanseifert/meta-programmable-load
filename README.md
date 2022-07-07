@@ -9,6 +9,7 @@ Other layers required to build the programmable load are:
 - meta-openembedded: specifically, meta-oe and meta-filesystems
 - meta-openamp
 - meta-rauc
+- meta-clang: Optional, to compile everything with clang. This is the only compiler that's tested with these.
 
 ## Build configuration
 First, select the distro `sativa` in your build configuration; then configure your `build/conf/local.conf` to use one of the following machines:
