@@ -3,10 +3,13 @@
 #include <event2/event.h>
 
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <thread>
 
 #include <plog/Log.h>
 #include <plog/Appenders/ConsoleAppender.h>
@@ -82,21 +85,38 @@ int main(const int argc, char * const * argv) {
     bool logSimple{false};
     std::filesystem::path fwPath{"/tmp/balls.elf"};
 
+    std::unique_ptr<Coprocessor> cop;
+
     // parse command line
     // TODO: do this
 
     // perform initialization
     InitLog(logLevel, logSimple);
 
-    // boot coprocessor
-    Coprocessor cop;
+    try {
+        // boot coprocessor
+        cop = std::make_unique<Coprocessor>();
 
-    cop.loadFirmware(fwPath);
-    cop.start();
+        cop->loadFirmware(fwPath);
+        cop->start();
 
-    // set up communications
-    // TODO: implement
-    InitLibevent();
+        // set up communications
+        InitLibevent();
+
+        /*
+         * Insert a short wait before we try to enable the RPC interface. This is required because
+         * the M4 firmware needs to do some setup during boot to start exposing the virtio rings
+         * and then notify the host.
+         *
+         * If we don't have this wait, the rpmsg subsystem won't have initialized, and we'll fail
+         * to open the control device.
+         */
+        std::this_thread::sleep_for (std::chrono::milliseconds(500));
+        cop->initRpc();
+    } catch(const std::exception &e) {
+        PLOG_FATAL << "failed to start " << argv[0] << ": " << e.what();
+        return 1;
+    }
 
     // enter the event loop
     while(gRun) {
@@ -104,11 +124,17 @@ int main(const int argc, char * const * argv) {
         break;
     }
 
-    // shut down the coprocessor
-    cop.stop();
+    // perform cleanup
+    try {
+        // shut down the coprocessor
+        cop->stop();
+        cop.reset();
 
-    // perform clean-up
-    // TODO: implement
+        // perform other clean-up
+    } catch(const std::exception &e) {
+        PLOG_ERROR << "failed to shut down " << argv[0] << ": " << e.what();
+        return 1;
+    }
 
     return 0;
 }
