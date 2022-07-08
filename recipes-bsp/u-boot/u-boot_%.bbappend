@@ -4,7 +4,7 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 UBOOT_LOCALVERSION = "-programmable-load"
 
 # use a newer u-boot (master)
-SRCREV = "bfa9306e140c136e43d0efc9574991db46ad8c9e"
+SRCREV = "0cc846dafcf6f6270c6587d6fe79011834d6e49a"
 LIC_FILES_CHKSUM = "file://Licenses/README;md5=2ca5f2c35c8cc335f0a19756634782f1"
 
 # extlinux config
