@@ -93,6 +93,8 @@ class Coprocessor {
                 default:
                     throw std::invalid_argument("invalid coproc state");
             }
+
+            this->coprocState = newState;
         }
 
         /// Set the directory to search for firmware in
@@ -147,6 +149,9 @@ class Coprocessor {
 
         /// file descriptor to the rpmsg control interface
         int rpmsgCtrlFd{-1};
+        /// most recently set coprocessor state
+        State coprocState{State::Unknown};
+
         /// initialized RPC channels
         std::vector<RpcChannelInfo> rpcChannels;
 };

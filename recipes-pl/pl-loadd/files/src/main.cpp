@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -12,12 +13,15 @@
 #include <thread>
 
 #include <plog/Log.h>
+#include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Appenders/ConsoleAppender.h>
 #include <plog/Formatters/FuncMessageFormatter.h>
 #include <plog/Formatters/TxtFormatter.h>
 #include <plog/Init.h>
 
 #include "Coprocessor.h"
+#include "Watchdog.h"
+//#include "RpcServer.h"
 #include "version.h"
 
 /// Whether the server shall continue to listen and process requests
@@ -36,15 +40,29 @@ std::atomic_bool gRun{true};
  * @param simple Whether the simple message output format (no timestamps) is used
  */
 static void InitLog(const plog::Severity level, const bool simple) {
+    // figure out if the console is a tty
+    const bool isTty = (isatty(fileno(stdout)) == 1);
+
+    // set up the logger
     if(simple) {
-        static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
-        plog::init(level, &ttyAppender);
+        if(isTty) {
+            static plog::ColorConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        } else {
+            static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        }
     } else {
-        static plog::ConsoleAppender<plog::TxtFormatter> ttyAppender;
-        plog::init(level, &ttyAppender);
+        if(isTty) {
+            static plog::ColorConsoleAppender<plog::TxtFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        } else {
+            static plog::ConsoleAppender<plog::TxtFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        }
     }
 
-    PLOG_VERBOSE << "Logging initialized - confd " << kVersion << " (" << kVersionGitHash << ")";
+    PLOG_VERBOSE << "Logging initialized - loadd " << kVersion << " (" << kVersionGitHash << ")";
 }
 
 /**
@@ -92,6 +110,7 @@ int main(const int argc, char * const * argv) {
 
     // perform initialization
     InitLog(logLevel, logSimple);
+    Watchdog::Start();
 
     try {
         // boot coprocessor
@@ -114,17 +133,21 @@ int main(const int argc, char * const * argv) {
         std::this_thread::sleep_for (std::chrono::milliseconds(500));
         cop->initRpc();
     } catch(const std::exception &e) {
-        PLOG_FATAL << "failed to start " << argv[0] << ": " << e.what();
+        PLOG_FATAL << "failed to start loadd: " << e.what();
         return 1;
     }
 
     // enter the event loop
+    PLOG_DEBUG << "starting main loop";
+
     while(gRun) {
         // TODO: implement
         break;
     }
 
     // perform cleanup
+    PLOG_INFO << "shutting down...";
+
     try {
         // shut down the coprocessor
         cop->stop();
@@ -132,7 +155,7 @@ int main(const int argc, char * const * argv) {
 
         // perform other clean-up
     } catch(const std::exception &e) {
-        PLOG_ERROR << "failed to shut down " << argv[0] << ": " << e.what();
+        PLOG_ERROR << "failed to shut down loadd: " << e.what();
         return 1;
     }
 

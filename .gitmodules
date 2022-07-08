@@ -19,3 +19,6 @@
 [submodule "recipes-pl/pl-loadd/files/lib/plog"]
 	path = recipes-pl/pl-loadd/files/lib/plog
 	url = https://github.com/SergiusTheBest/plog.git
+[submodule "recipes-pl/pl-loadd/files/lib/fmt"]
+	path = recipes-pl/pl-loadd/files/lib/fmt
+	url = https://github.com/fmtlib/fmt.git

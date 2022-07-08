@@ -9,6 +9,7 @@
 #include <string>
 #include <system_error>
 
+#include <fmt/format.h>
 #include <plog/Log.h>
 
 #include <fcntl.h>
@@ -25,13 +26,22 @@
  * will be interrupted when they're killed.
  */
 Coprocessor::~Coprocessor() {
-    // shut down the coproc; if it's not running, we'll get an error which we ignore
+    // shut down the coproc; ignore any errors though
     try {
-        this->stop();
-    } catch(const std::exception &) {}
+        if(this->coprocState == State::Running) {
+            this->stop();
+        }
+    } catch(const std::exception &e) {
+        PLOG_ERROR << "failed to stop coprocessor: " << e.what();
+    }
 
-    // destroy any remaining endpoints
-    this->destroyAllRpcEndpoints();
+    // simply close all open endpoint descriptors
+    for(auto it = this->rpcChannels.rbegin(); it != this->rpcChannels.rend(); ++it) {
+        const auto &info = *it;
+        if(info.chrdevFd != -1) {
+            close(info.chrdevFd);
+        }
+    }
 }
 
 /**
@@ -107,7 +117,7 @@ void Coprocessor::initRpc() {
     // close any endpoints that are still open (leftovers)
     try {
         const auto numClosed = this->destroyAllRpcEndpoints();
-        PLOG_INFO_IF(!!numClosed) << "destroyed " << numClosed << " leftover chrdev ep's";
+        PLOG_WARNING_IF(!!numClosed) << "destroyed " << numClosed << " leftover chrdev ep's";
     } catch(const std::exception &e) {
         PLOG_WARNING << "failed to destroy endpoints: " << e.what();
     }
@@ -129,9 +139,8 @@ void Coprocessor::initRpc() {
             std::filesystem::path devPath;
 
             this->connectRpcEndpoint(detail.name, detail.address, devPath);
-            //PLOG_DEBUG << "opened endpoint " << std::format("{}:{:x}", detail.name, detail.address) 
-            PLOG_DEBUG << "opened endpoint " << detail.name << ":" << std::hex << detail.address
-                       << "' = " << devPath.native();
+            PLOG_DEBUG << "opened endpoint " << fmt::format("{}:{:x}", detail.name, detail.address)
+                       << " = " << devPath.native();
 
             // try to open it
             fd = open(devPath.native().c_str(), O_RDWR);
@@ -224,12 +233,20 @@ size_t Coprocessor::destroyAllRpcEndpoints() {
     size_t count{0};
 
     // start with any stored endpoints
-    for(const auto &info : this->rpcChannels) {
+    for(auto it = this->rpcChannels.rbegin(); it != this->rpcChannels.rend(); ++it) {
+        const auto &info = *it;
+        PLOG_VERBOSE << "destroying endpoint " << info.epName << " (" << info.chrdevPath.native()
+                   << ")";
+
         try {
             this->destroyRpcEndpoint(info.chrdevFd);
+            count++;
         } catch(const std::exception &e) {
             PLOG_ERROR << "failed to destroy ep '" << info.epName << "': " << e.what();
         }
+
+        // either way, close the fd
+        close(info.chrdevFd);
     }
 
     this->rpcChannels.clear();
@@ -244,7 +261,10 @@ size_t Coprocessor::destroyAllRpcEndpoints() {
 
         // try to open the file; then destroy the endpoint
         try {
+            PLOG_VERBOSE << "destroying leftover ep " << dent.path().native();
+
             this->destroyRpcEndpoint(dent.path());
+            count++;
         } catch(const std::exception &e) {
             PLOG_ERROR << "failed to destroy ep '" << dent.path() << "': " << e.what();
         }

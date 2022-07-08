@@ -40,7 +40,7 @@ link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
 # Remote dependencies
 #add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
-#add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
 
 ###############
 # Create version file
@@ -62,7 +62,10 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/src/version.c.in ${VERSION_FILE} @ONLY)
 add_executable(daemon
     ${VERSION_FILE}
     src/main.cpp
+    src/Config.cpp
+    src/Watchdog.cpp
     src/Coprocessor.cpp
+    src/RpcServer.cpp
 )
 
 set_target_properties(daemon PROPERTIES OUTPUT_NAME loadd)
@@ -71,7 +74,7 @@ target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(daemon PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/daemon)
 #target_link_libraries(daemon PRIVATE SQLite::SQLite3 plog::plog fmt::fmt
 #    tomlplusplus::tomlplusplus)
-target_link_libraries(daemon PRIVATE plog::plog)
+target_link_libraries(daemon PRIVATE plog::plog fmt::fmt)
 
 target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS})
 target_link_libraries(daemon PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES})
