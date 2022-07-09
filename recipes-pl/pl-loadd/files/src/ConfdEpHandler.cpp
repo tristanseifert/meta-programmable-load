@@ -84,10 +84,12 @@ ConfdEpHandler::ConfdEpHandler(const int fd, const std::shared_ptr<RpcServer> &l
         try {
             reinterpret_cast<ConfdEpHandler *>(ctx)->handleRpmsgRead(bev);
         } catch(const std::exception &e) {
-            PLOG_ERROR << "Failed to handle confd read: " << e.what();
+            PLOG_ERROR << "Failed to handle rpmsg read: " << e.what();
             // TODO: abort program
         }
-    }, nullptr, nullptr, this);
+    }, nullptr, [](auto bev, auto what, auto ctx) {
+        PLOG_ERROR << "rpmsg event (unhandled): " << what;
+    }, this);
 
     // add events to rpc server's run loop
     err = bufferevent_enable(this->confdBev, EV_READ);
@@ -183,7 +185,7 @@ void ConfdEpHandler::handleConfdRead(struct bufferevent *bev) {
     auto buf = bufferevent_get_input(bev);
     PLOG_VERBOSE << "rx from confd: " << evbuffer_get_length(buf);
 
-    /*const size_t pending = evbuffer_get_length(buf);
+    const size_t pending = evbuffer_get_length(buf);
 
     this->confdRxBuf.resize(pending);
     int read = evbuffer_remove(buf, static_cast<void *>(this->confdRxBuf.data()), pending);
@@ -192,11 +194,10 @@ void ConfdEpHandler::handleConfdRead(struct bufferevent *bev) {
         throw std::runtime_error("failed to drain confd read buffer");
     }
 
-    // send it
-    //err = bufferevent_write(bev, this->confdRxBuf.data(), pending);*/
-    err = bufferevent_write_buffer(this->rpmsgBev, buf);
 
-    if(err != 0) {
+    // send it (TODO: why can't we write using bufferevent?)
+    err = write(this->remoteEp, this->confdRxBuf.data(), this->confdRxBuf.size());
+    if(err < 0) {
         throw std::runtime_error("failed to write confd->m4 message");
     }
 }
@@ -222,12 +223,22 @@ void ConfdEpHandler::handleConfdEvent(struct bufferevent *bev, const uintptr_t f
  * All data available to read is pushed to the confd socket.
  */
 void ConfdEpHandler::handleRpmsgRead(struct bufferevent *bev) {
-    int err;
+    int err{0};
 
     auto buf = bufferevent_get_input(bev);
     PLOG_VERBOSE << "rx from rpmsg: " << evbuffer_get_length(buf);
 
-    err = bufferevent_write_buffer(this->confdBev, buf);
+    const size_t pending = evbuffer_get_length(buf);
+
+    this->confdRxBuf.resize(pending);
+    int read = evbuffer_remove(buf, static_cast<void *>(this->confdRxBuf.data()), pending);
+
+    if(read == -1) {
+        throw std::runtime_error("failed to drain confd read buffer");
+    }
+
+    // send it
+    err = bufferevent_write(this->confdBev, this->confdRxBuf.data(), pending);
 
     if(err != 0) {
         throw std::runtime_error("failed to write confd->m4 message");
