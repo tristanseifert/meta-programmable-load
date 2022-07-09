@@ -57,6 +57,23 @@ class RpcServer {
             void send(std::span<const std::byte>);
         };
 
+        /**
+         * @brief Flags for a request
+         *
+         * These flags may be combined by bitwise-OR, and are passed to the various processing
+         * functions to alter their behavior.
+         */
+        enum Flags: uintptr_t {
+            None                                = 0,
+            /**
+             * @brief Output floating point values with 32-bit precision
+             *
+             * When set, all floating point values (internally stored as doubles) will be converted
+             * to 32-bit floating point (float) types on output.
+             */
+            SinglePrecisionFloat                = (1 << 0),
+        };
+
     private:
         void initSocket();
 
@@ -74,8 +91,9 @@ class RpcServer {
 
         void doCfgQuery(std::span<const std::byte>, struct cbor_item_t *,
                 const std::shared_ptr<Client> &);
+        void getCfgQueryFlags(struct cbor_item_t *, Flags &);
         void sendKeyValue(const struct rpc_header *, const std::shared_ptr<Client> &,
-                const std::string &, const PropertyValue &);
+                const std::string &, const PropertyValue &, const Flags = Flags::None);
 
         void doCfgUpdate(std::span<const std::byte>, struct cbor_item_t *,
                 std::shared_ptr<Client> &);

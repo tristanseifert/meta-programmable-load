@@ -447,12 +447,54 @@ void RpcServer::doCfgQuery(std::span<const std::byte> packet, cbor_item_t *item,
         throw std::runtime_error("failed to get key name (wtf)");
     }
 
+    // get operation flags
+    Flags flags{Flags::None};
+    this->getCfgQueryFlags(item, flags);
+
     // TODO: validate access
-    PLOG_VERBOSE << "key name = '" << keyName << "'";
+    PLOG_VERBOSE << fmt::format("key name = '{}' flags = {:04x}", keyName,
+            static_cast<uintptr_t>(flags));
     auto result = this->store->getKey(keyName);
 
     const auto hdr = reinterpret_cast<const struct rpc_header *>(packet.data());
-    this->sendKeyValue(hdr, client, keyName, result);
+    this->sendKeyValue(hdr, client, keyName, result, flags);
+}
+
+/**
+ * @brief Parse input request and extract flags
+ *
+ * @param item CBOR map containing request data
+ * @param outFlags Variable to receive all flags
+ */
+void RpcServer::getCfgQueryFlags(struct cbor_item_t *item, Flags &outFlags) {
+    auto keys = cbor_map_handle(item);
+
+    for(size_t i = 0; i < cbor_map_size(item); i++) {
+        auto &pair = keys[i];
+
+        // validate key type: must be a string
+        if(!cbor_isa_string(pair.key)) {
+            throw std::runtime_error("invalid map key type (expected string)");
+        }
+
+        const auto keyStr = reinterpret_cast<const char *>(cbor_string_handle(pair.key));
+        const auto keyStrLen = cbor_string_length(pair.key);
+
+        if(!keyStr) {
+            throw std::runtime_error("failed to get map key string");
+        }
+
+        // check if it's a known key value
+        if(!strncmp(keyStr, "forceFloat", keyStrLen)) {
+            if(!cbor_isa_float_ctrl(pair.value) || !cbor_is_bool(pair.value)) {
+                throw std::runtime_error("invalid type for `key` (expected bool)");
+            }
+
+            if(cbor_get_bool(pair.value)) {
+                outFlags = static_cast<Flags>(outFlags | Flags::SinglePrecisionFloat);
+            }
+        }
+    }
 }
 
 /**
@@ -465,9 +507,10 @@ void RpcServer::doCfgQuery(std::span<const std::byte> packet, cbor_item_t *item,
  * @param client Client connection to send the response to
  * @param key Key name that was queried
  * @param value Value of the key
+ * @param flags Flags to modify the behavior of the routine
  */
 void RpcServer::sendKeyValue(const struct rpc_header *hdr, const std::shared_ptr<Client> &client,
-        const std::string &key, const PropertyValue &value) {
+        const std::string &key, const PropertyValue &value, const Flags flags) {
     bool hasValue;
     const bool found = !std::holds_alternative<std::monostate>(value);
 
@@ -515,11 +558,12 @@ void RpcServer::sendKeyValue(const struct rpc_header *hdr, const std::shared_ptr
             });
             hasValue = true;
         }
-        // double
+        // double (or float if requested)
         else if constexpr (std::is_same_v<T, double>) {
             cbor_map_add(root, (struct cbor_pair) {
                 .key = cbor_move(cbor_build_string("value")),
-                .value = cbor_move(cbor_build_float8(arg))
+                .value = cbor_move((flags & Flags::SinglePrecisionFloat) ? cbor_build_float4(arg) :
+                        cbor_build_float8(arg))
             });
             hasValue = true;
         }
