@@ -410,11 +410,13 @@ std::string RpcServer::ExtractKeyName(struct cbor_item_t *item) {
             }
 
             auto handle = cbor_string_handle(pair.value);
+            const auto valueStrLen = cbor_string_length(pair.value);
+
             if(!handle) {
                 throw std::runtime_error("failed to get key name string");
             }
 
-            keyName = reinterpret_cast<const char *>(handle);
+            keyName = {reinterpret_cast<const char *>(handle), valueStrLen};
         }
         // ignore other keys for forward compat
     }
