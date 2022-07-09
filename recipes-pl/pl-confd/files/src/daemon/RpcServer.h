@@ -72,6 +72,19 @@ class RpcServer {
              * to 32-bit floating point (float) types on output.
              */
             SinglePrecisionFloat                = (1 << 0),
+
+            /**
+             * @brief Format message as a response to a "set" request
+             *
+             * This renames the `found` field to `updated` within the body of a key response, and
+             * does not send the key value again.
+             */
+            IsSetRequest                        = (1 << 1),
+
+            /**
+             * @brief Exclude the property key value from response
+             */
+            ExcludeValue                        = (1 << 2),
         };
 
     private:

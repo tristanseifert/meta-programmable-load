@@ -9,6 +9,7 @@
 #include <string>
 
 #include <plog/Log.h>
+#include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Appenders/ConsoleAppender.h>
 #include <plog/Formatters/FuncMessageFormatter.h>
 #include <plog/Formatters/TxtFormatter.h>
@@ -36,15 +37,28 @@ std::atomic_bool gRun{true};
  * @param simple Whether the simple message output format (no timestamps) is used
  */
 static void InitLog(const plog::Severity level, const bool simple) {
-    if(simple) {
-        static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
-        plog::init(level, &ttyAppender);
-    } else {
-        static plog::ConsoleAppender<plog::TxtFormatter> ttyAppender;
-        plog::init(level, &ttyAppender);
-    }
+    // figure out if the console is a tty
+    const bool isTty = (isatty(fileno(stdout)) == 1);
 
-    PLOG_VERBOSE << "Logging initialized - confd " << kVersion << " (" << kVersionGitHash << ")";
+    // set up the logger
+    if(simple) {
+        if(isTty) {
+            static plog::ColorConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        } else {
+            static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        }
+    } else {
+        if(isTty) {
+            static plog::ColorConsoleAppender<plog::TxtFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        } else {
+            static plog::ConsoleAppender<plog::TxtFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        }
+    }
+    PLOG_INFO << "Starting confd " << kVersion << " (" << kVersionGitHash << ")";
 }
 
 /**

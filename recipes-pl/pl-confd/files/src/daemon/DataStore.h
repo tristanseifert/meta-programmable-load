@@ -7,6 +7,7 @@
 #include <mutex>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 #include <SQLiteCpp/SQLiteCpp.h>
 
@@ -78,6 +79,35 @@ class DataStore {
                 default:
                     return "";
             }
+        }
+        /// Get the property value type enum (to store in the db) for a given value type
+        constexpr static inline PropertyValueType TypeForValue(const PropertyValue &val) {
+            return std::visit([](auto&& arg) -> PropertyValueType {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, std::nullptr_t>) {
+                    return PropertyValueType::Null;
+                }
+                else if constexpr (std::is_same_v<T, std::string>) {
+                    return PropertyValueType::String;
+                }
+                else if constexpr (std::is_same_v<T, Blob>) {
+                    return PropertyValueType::Blob;
+                }
+                else if constexpr (std::is_same_v<T, uint64_t>) {
+                    return PropertyValueType::Integer;
+                }
+                else if constexpr (std::is_same_v<T, double>) {
+                    return PropertyValueType::Real;
+                }
+                // booleans are stored as integers
+                else if constexpr (std::is_same_v<T, bool>) {
+                    return PropertyValueType::Integer;
+                }
+                // any other types get mapped as null as well (in this case, monostate)
+                else {
+                    return PropertyValueType::Null;
+                }
+            }, val);
         }
 
     private:

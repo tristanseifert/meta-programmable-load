@@ -176,6 +176,8 @@ CREATE INDEX PropertyValuesReal_i2 ON PropertyValuesReal(propertyId);
  * @return Property value (or std::monostate if not found)
  */
 PropertyValue DataStore::getKey(const std::string_view &name) {
+    std::lock_guard lg(this->dbLock);
+
     // get the id and type information
     SQLite::Statement stmtInfo(*this->db, "SELECT id, valueType FROM PropertyKeys WHERE key = :keyName;");
     stmtInfo.bind(":keyName", name.data());

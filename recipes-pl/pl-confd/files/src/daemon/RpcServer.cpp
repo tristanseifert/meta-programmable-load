@@ -513,76 +513,81 @@ void RpcServer::sendKeyValue(const struct rpc_header *hdr, const std::shared_ptr
         const std::string &key, const PropertyValue &value, const Flags flags) {
     bool hasValue;
     const bool found = !std::holds_alternative<std::monostate>(value);
+    const bool outputValue = !(flags & Flags::ExcludeValue);
 
     // set up the generic part of the response
-    cbor_item_t *root = cbor_new_definite_map(found ? 3 : 2);
+    cbor_item_t *root = cbor_new_definite_map((found ? 3 : 2) - (outputValue ? 0 : 1));
     cbor_map_add(root, (struct cbor_pair) {
         .key = cbor_move(cbor_build_string("key")),
         .value = cbor_move(cbor_build_string(key.c_str()))
     });
 
     // add the current value (if any)
-    std::visit([&](auto&& arg) {
-        using T = std::decay_t<decltype(arg)>;
+    if(outputValue) {
+        std::visit([&](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
 
-        // null value
-        if constexpr (std::is_same_v<T, std::nullptr_t>) {
-            cbor_map_add(root, (struct cbor_pair) {
-                .key = cbor_move(cbor_build_string("value")),
-                .value = cbor_move(cbor_new_null())
-            });
-            hasValue = true;
-        }
-        // UTF-8 string
-        else if constexpr (std::is_same_v<T, std::string>) {
-            cbor_map_add(root, (struct cbor_pair) {
-                .key = cbor_move(cbor_build_string("value")),
-                .value = cbor_move(cbor_build_string(arg.c_str()))
-            });
-            hasValue = true;
-        }
-        // byte vector (BLOB)
-        else if constexpr (std::is_same_v<T, Blob>) {
-            cbor_map_add(root, (struct cbor_pair) {
-                .key = cbor_move(cbor_build_string("value")),
-                .value = cbor_move(cbor_build_bytestring(reinterpret_cast<cbor_data>(arg.data()),
-                            arg.size()))
-            });
-            hasValue = true;
-        }
-        // integer
-        else if constexpr (std::is_same_v<T, uint64_t>) {
-            cbor_map_add(root, (struct cbor_pair) {
-                .key = cbor_move(cbor_build_string("value")),
-                .value = cbor_move(cbor_build_uint64(arg))
-            });
-            hasValue = true;
-        }
-        // double (or float if requested)
-        else if constexpr (std::is_same_v<T, double>) {
-            cbor_map_add(root, (struct cbor_pair) {
-                .key = cbor_move(cbor_build_string("value")),
-                .value = cbor_move((flags & Flags::SinglePrecisionFloat) ? cbor_build_float4(arg) :
-                        cbor_build_float8(arg))
-            });
-            hasValue = true;
-        }
-        // boolean
-        else if constexpr (std::is_same_v<T, bool>) {
-            cbor_map_add(root, (struct cbor_pair) {
-                .key = cbor_move(cbor_build_string("value")),
-                .value = cbor_move(cbor_build_bool(arg))
-            });
-            hasValue = true;
-        }
-        // no value
-        else if constexpr (std::is_same_v<T, std::monostate>) {
-            hasValue = false;
-        }
-    }, value);
+            // null value
+            if constexpr (std::is_same_v<T, std::nullptr_t>) {
+                cbor_map_add(root, (struct cbor_pair) {
+                    .key = cbor_move(cbor_build_string("value")),
+                    .value = cbor_move(cbor_new_null())
+                });
+                hasValue = true;
+            }
+            // UTF-8 string
+            else if constexpr (std::is_same_v<T, std::string>) {
+                cbor_map_add(root, (struct cbor_pair) {
+                    .key = cbor_move(cbor_build_string("value")),
+                    .value = cbor_move(cbor_build_string(arg.c_str()))
+                });
+                hasValue = true;
+            }
+            // byte vector (BLOB)
+            else if constexpr (std::is_same_v<T, Blob>) {
+                cbor_map_add(root, (struct cbor_pair) {
+                    .key = cbor_move(cbor_build_string("value")),
+                    .value = cbor_move(cbor_build_bytestring(reinterpret_cast<cbor_data>(arg.data()),
+                                arg.size()))
+                });
+                hasValue = true;
+            }
+            // integer
+            else if constexpr (std::is_same_v<T, uint64_t>) {
+                cbor_map_add(root, (struct cbor_pair) {
+                    .key = cbor_move(cbor_build_string("value")),
+                    .value = cbor_move(cbor_build_uint64(arg))
+                });
+                hasValue = true;
+            }
+            // double (or float if requested)
+            else if constexpr (std::is_same_v<T, double>) {
+                cbor_map_add(root, (struct cbor_pair) {
+                    .key = cbor_move(cbor_build_string("value")),
+                    .value = cbor_move((flags & Flags::SinglePrecisionFloat) ? cbor_build_float4(arg) :
+                            cbor_build_float8(arg))
+                });
+                hasValue = true;
+            }
+            // boolean
+            else if constexpr (std::is_same_v<T, bool>) {
+                cbor_map_add(root, (struct cbor_pair) {
+                    .key = cbor_move(cbor_build_string("value")),
+                    .value = cbor_move(cbor_build_bool(arg))
+                });
+                hasValue = true;
+            }
+            // no value
+            else if constexpr (std::is_same_v<T, std::monostate>) {
+                hasValue = false;
+            }
+        }, value);
+    } else {
+        hasValue = !std::holds_alternative<std::monostate>(value);
+    }
 
     cbor_map_add(root, (struct cbor_pair) {
-        .key = cbor_move(cbor_build_string("found")),
+        .key = cbor_move(cbor_build_string((flags & Flags::IsSetRequest) ? "updated" : "found")),
         .value = cbor_move(cbor_build_bool(hasValue))
     });
 
@@ -630,6 +635,8 @@ void RpcServer::doCfgUpdate(std::span<const std::byte> packet, cbor_item_t *item
     if(keyName.empty()) {
         throw std::runtime_error("failed to get key name (wtf)");
     }
+
+    // TODO: validate key access
 
     /*
      * Get the value of the key
@@ -683,8 +690,22 @@ void RpcServer::doCfgUpdate(std::span<const std::byte> packet, cbor_item_t *item
             memcpy(buf.data(), blobData, blobNumBytes);
             value = buf;
         } else if(cbor_isa_uint(pair.value)) { // unsigned integer
-            // TODO: extend narrower types
-            value = cbor_get_uint64(pair.value);
+            uint64_t temp;
+            switch(cbor_int_get_width(pair.value)) {
+                case CBOR_INT_8:
+                    temp = cbor_get_uint8(pair.value);
+                    break;
+                case CBOR_INT_16:
+                    temp = cbor_get_uint16(pair.value);
+                    break;
+                case CBOR_INT_32:
+                    temp = cbor_get_uint32(pair.value);
+                    break;
+                case CBOR_INT_64:
+                    temp = cbor_get_uint64(pair.value);
+                    break;
+            }
+            value = temp;
         } else if(cbor_isa_float_ctrl(pair.value)) { // float or bool
             // probably a bool?
             if(cbor_float_ctrl_is_ctrl(pair.value)) {
@@ -768,9 +789,7 @@ RpcServer::Client::~Client() {
         close(this->socket);
     }
 
-    if(this->event) {
-        bufferevent_free(this->event);
-    }
+    // bufferevent gets destroyed by main loop
 }
 
 /**
