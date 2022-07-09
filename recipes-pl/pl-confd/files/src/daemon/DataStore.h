@@ -65,6 +65,11 @@ class DataStore {
         bool hasChildren(const std::string_view &keyName);
         std::optional<std::string> getMetaValue(const std::string_view &key);
 
+        void insertKey(const std::string_view &keyName, const PropertyValue &value);
+        void updateKey(const uint32_t keyId, const PropertyValueType oldValueType,
+                const PropertyValue &newValue);
+        void updateKeyTimestamp(const uint32_t keyId);
+
         /// Get the name of the table containing values of the given type
         constexpr static std::string_view ValueTableName(const PropertyValueType t) {
             switch(t) {
@@ -108,6 +113,40 @@ class DataStore {
                     return PropertyValueType::Null;
                 }
             }, val);
+        }
+
+        /**
+         * @brief Bind property value to SQL statement
+         *
+         * @param stmt Statement to bind to
+         * @param colName Column name to bind the value to
+         * @param value Value to bind
+         */
+        static inline void BindValue(SQLite::Statement &stmt, const std::string_view &colName,
+                const PropertyValue &value) {
+            std::visit([&](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+
+                if constexpr(std::is_same_v<T, std::string>) {
+                    stmt.bind(colName.data(), arg);
+                }
+                else if constexpr(std::is_same_v<T, Blob>) {
+                    stmt.bind(colName.data(), static_cast<const void *>(arg.data()), arg.size());
+                }
+                else if constexpr(std::is_same_v<T, uint64_t>) {
+                    stmt.bind(colName.data(), static_cast<int64_t>(arg));
+                }
+                else if constexpr(std::is_same_v<T, double>) {
+                    stmt.bind(colName.data(), arg);
+                }
+                else if constexpr(std::is_same_v<T, bool>) {
+                    stmt.bind(colName.data(), arg);
+                }
+                // other types should never get through to here
+                else {
+                    throw std::logic_error("invalid type for set");
+                }
+            }, value);
         }
 
     private:

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <stdexcept>
+#include <type_traits>
 
 #include <fmt/format.h>
 #include <plog/Log.h>
@@ -236,6 +237,65 @@ PropertyValue DataStore::getKey(const std::string_view &name) {
 }
 
 /**
+ * @brief Set a property value
+ *
+ * If the key does not exist already, it will be created. If it does exist, its value is updated.
+ *
+ * @param name Name of the key to set or update
+ * @param vlaue Value to set the key to
+ *
+ * @throw std::logic_error Database consistency error
+ *
+ * @remark If an existing key is updated, it must be updated with data of the same type as it was
+ *         originally created with. To change the value type of a key, delete the key and create
+ *         it anew; or set its value to `null` before changing to delete the old value.
+ */
+void DataStore::setKey(const std::string_view &name, const PropertyValue &value) {
+    std::lock_guard lg(this->dbLock);
+
+    // get the id and type information
+    SQLite::Statement stmtInfo(*this->db, "SELECT id, valueType FROM PropertyKeys WHERE key = :keyName;");
+    stmtInfo.bind(":keyName", name.data());
+
+    if(!stmtInfo.executeStep()) {
+        // key doesn't exist yet, so insert it
+        return this->insertKey(name, value);
+    }
+
+    /*
+     * Get info about the existing key and its type. There's several different cases we take based
+     * on the combination of the old and new value type:
+     *
+     * - Old type = null:  The key's value is updated without any additional constraints.
+     * - Old type = other: The key's value may only be set to null or the old type.
+     *
+     * This is a mostly arbitrary restriction intended to detect potential bugs in client
+     * applications. (That's why setting a key to `null` is allowed: to callers, that's not really
+     * a different type but a value, yet we treat it as a different value type.)
+     */
+    const uint32_t keyId = stmtInfo.getColumn("id");
+    const uint32_t oldValueType = stmtInfo.getColumn("valueType");
+
+    if(oldValueType == static_cast<uint32_t>(PropertyValueType::Null)) {
+        // allow any type to be set without further checking
+        return this->updateKey(keyId, static_cast<PropertyValueType>(oldValueType), value);
+    } else {
+        // ensure the new value type is either null…
+        if(std::holds_alternative<std::nullptr_t>(value)) {
+            return this->updateKey(keyId, static_cast<PropertyValueType>(oldValueType), value);
+        }
+        // …or the existing value type
+        else if(oldValueType == static_cast<uint32_t>(TypeForValue(value))) {
+            return this->updateKey(keyId, static_cast<PropertyValueType>(oldValueType), value);
+        }
+        // otherwise, the set attempt is not permitted
+        else {
+            throw std::invalid_argument(fmt::format("changing type of key '{}' not allowed", name));
+        }
+    }
+}
+
+/**
  * @brief Delete a configuration key
  *
  * This function will delete only individual keys, whose key matches the specified name exactly.
@@ -300,4 +360,135 @@ std::optional<std::string> DataStore::getMetaValue(const std::string_view &key) 
 
     // read out the value column
     return static_cast<std::string>(stmt.getColumn("value"));
+}
+
+/**
+ * @brief Insert a new key in the data store
+ *
+ * Allocate a new row into the data store, including a new value row if needed.
+ *
+ * @param keyName Name of the new key
+ * @param value Value of the new key
+ *
+ * @throw std::runtime_error Database consistency errors
+ */
+void DataStore::insertKey(const std::string_view &keyName, const PropertyValue &value) {
+    int err;
+
+    // validate inputs
+    if(keyName.empty()) {
+        throw std::invalid_argument("invalid name");
+    } else if(std::holds_alternative<std::monostate>(value)) {
+        throw std::invalid_argument("invalid value");
+    }
+
+    // set up a transaction
+    SQLite::Transaction txn(*this->db);
+
+    // insert the key row
+    const auto type = TypeForValue(value);
+
+    PLOG_DEBUG << "set key '" << keyName << "' type " << (uint32_t) type;
+
+    SQLite::Statement infoStmt(*this->db, "INSERT INTO PropertyKeys (key, valueType) "
+            "VALUES (:key, :type);");
+    infoStmt.bind(":key", keyName.data());
+    infoStmt.bind(":type", static_cast<uintptr_t>(type));
+
+    err = infoStmt.exec();
+    if(!err) {
+        throw std::runtime_error("failed to insert property key info");
+    }
+
+    const auto keyId = this->db->getLastInsertRowid();
+    PLOG_VERBOSE << "inserted key '" << keyName << "': " << keyId;
+
+    // if value is non-null, insert a value row
+    if(type != PropertyValueType::Null) {
+        SQLite::Statement valueStmt(*this->db, fmt::format("INSERT INTO {} (propertyId, value) "
+                "VALUES(:keyId, :value);", ValueTableName(type)));
+        valueStmt.bind(":keyId", keyId);
+        BindValue(valueStmt, ":value", value);
+
+        err = valueStmt.exec();
+        if(!err) {
+            throw std::runtime_error("failed to insert property key value");
+        }
+    }
+
+    // commit the transaction
+    txn.commit();
+}
+
+/**
+ * @brief Update the value of an existing key
+ *
+ * @param keyId Primary key id of the key to update
+ * @param oldValueType Type of the old value of this property
+ * @param newValue New value to assign to the key
+ */
+void DataStore::updateKey(const uint32_t keyId, const PropertyValueType oldValueType,
+        const PropertyValue &newValue) {
+    const auto newValueType = TypeForValue(newValue);
+
+    PLOG_WARNING << "update key " << keyId << " old type " << (uint32_t) oldValueType << " new "
+        << (uint32_t) newValueType;
+
+    // start a transaction
+    SQLite::Transaction txn(*this->db);
+
+    // update the type of the key (if needed)
+    if(oldValueType != newValueType) {
+        // update the info row
+        SQLite::Statement updateStmt(*this->db, "UPDATE PropertyKeys SET valueType = :newValueType "
+                "WHERE id = :keyId;");
+        updateStmt.bind(":keyId", keyId);
+        updateStmt.bind(":newValueType", static_cast<uint32_t>(newValueType));
+
+        if(!updateStmt.exec()) {
+            throw std::runtime_error("failed to update property key type");
+        }
+
+        // delete old value row, if exists
+        SQLite::Statement delValStmt(*this->db, fmt::format("DELETE FROM {} "
+                    "WHERE propertyId = :keyId;", ValueTableName(oldValueType)));
+        delValStmt.bind(":keyId", keyId);
+        delValStmt.exec();
+    }
+
+    // insert (or update) a value row
+    if(newValueType != PropertyValueType::Null) {
+        SQLite::Statement stmt(*this->db, fmt::format("INSERT INTO {} (propertyId, value) "
+                    "VALUES (:keyId, :value) ON CONFLICT(propertyId) DO UPDATE SET value=:value",
+                ValueTableName(newValueType)));
+        stmt.bind(":keyId", keyId);
+        BindValue(stmt, ":value", newValue);
+
+        if(!stmt.exec()) {
+            throw std::runtime_error("failed to upsert value");
+        }
+    }
+
+    // update the entry's "last modified" timestamp and commit changes
+    this->updateKeyTimestamp(keyId);
+
+    txn.commit();
+}
+
+/**
+ * @brief Update the "last modified" timestamp of a key
+ *
+ * @param keyId Primary key id of the key
+ *
+ * @remark This should be wrapped in an outer transaction.
+ */
+void DataStore::updateKeyTimestamp(const uint32_t keyId) {
+    SQLite::Statement stmt(*this->db, "UPDATE PropertyKeys SET updatedAt = strftime('%s','now') "
+            "WHERE id = :keyId;");
+    stmt.bind(":keyId", keyId);
+
+    int err = stmt.exec();
+    if(!err) {
+        throw std::runtime_error("failed to update property key timestamp");
+    }
 }

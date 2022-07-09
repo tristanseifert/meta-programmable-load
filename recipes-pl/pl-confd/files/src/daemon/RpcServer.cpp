@@ -715,13 +715,20 @@ void RpcServer::doCfgUpdate(std::span<const std::byte> packet, cbor_item_t *item
             else {
                 value = cbor_float_get_float(pair.value);
             }
+        } else {
+            throw std::invalid_argument(fmt::format("invalid value type {}",
+                        cbor_typeof(pair.value)));
         }
     }
 
     // perform update
-    PLOG_ERROR << "TODO: update request for key '" << keyName << "'";
-}
+    this->store->setKey(keyName, value);
 
+    // send a reply (assume success if we get here)
+    const auto hdr = reinterpret_cast<const struct rpc_header *>(packet.data());
+    this->sendKeyValue(hdr, client, keyName, value,
+            static_cast<Flags>(Flags::IsSetRequest | Flags::ExcludeValue));
+}
 
 /**
  * @brief Handle a signal that indicates the process should terminate
