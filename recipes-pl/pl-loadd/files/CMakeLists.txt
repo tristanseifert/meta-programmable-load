@@ -65,6 +65,7 @@ add_executable(daemon
     src/Config.cpp
     src/Watchdog.cpp
     src/Coprocessor.cpp
+    src/ConfdEpHandler.cpp
     src/RpcServer.cpp
 )
 

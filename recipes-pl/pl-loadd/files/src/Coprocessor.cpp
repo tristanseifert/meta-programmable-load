@@ -1,5 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <linux/rpmsg.h>
+#include <sys/ioctl.h>
 
 #include <cerrno>
 #include <cstring>
@@ -12,11 +14,30 @@
 #include <fmt/format.h>
 #include <plog/Log.h>
 
-#include <fcntl.h>
-#include <linux/rpmsg.h>
-#include <sys/ioctl.h>
-
+#include "ConfdEpHandler.h"
 #include "Coprocessor.h"
+
+const std::array<Coprocessor::EndpointInfo, Coprocessor::kNumRpcEndpoints> Coprocessor::kRpcChannels{{
+    /// load control (consumed by loadd)
+    {
+        .name = "pl.control",
+        .address = 0x420,
+        .isLoadControl = true,
+        .isRetrievable = false,
+    },
+    /// Interface to confd
+    {
+        .name = "confd",
+        .address = 0x421,
+        .isLoadControl = false,
+        .isRetrievable = false,
+        .makeHandler = [](auto fd, auto lrpc, auto outHandler) {
+            outHandler = std::make_shared<ConfdEpHandler>(fd, lrpc);
+        },
+    },
+}};
+
+
 
 /**
  * @brief Clean up coprocessor resources
@@ -37,7 +58,10 @@ Coprocessor::~Coprocessor() {
 
     // simply close all open endpoint descriptors
     for(auto it = this->rpcChannels.rbegin(); it != this->rpcChannels.rend(); ++it) {
-        const auto &info = *it;
+        auto &info = *it;
+
+        info.handler.reset();
+
         if(info.chrdevFd != -1) {
             close(info.chrdevFd);
         }
@@ -113,7 +137,7 @@ void Coprocessor::writeFile(const std::string_view &base, const std::string_view
  * channel, which we re-export with an RPC interface on a domain socket) while the others will just
  * be chilling, until a task checks in and requests it.
  */
-void Coprocessor::initRpc() {
+void Coprocessor::initRpc(const std::shared_ptr<RpcServer> &lrpc) {
     // close any endpoints that are still open (leftovers)
     try {
         const auto numClosed = this->destroyAllRpcEndpoints();
@@ -134,18 +158,36 @@ void Coprocessor::initRpc() {
 
     // initialize each channel
     for(const auto &detail : kRpcChannels) {
+        int fd{-1};
+
         try {
-            int fd{-1};
             std::filesystem::path devPath;
+            std::shared_ptr<EndpointHandler> handler;
 
             this->connectRpcEndpoint(detail.name, detail.address, devPath);
             PLOG_DEBUG << "opened endpoint " << fmt::format("{}:{:x}", detail.name, detail.address)
                        << " = " << devPath.native();
 
-            // try to open it
+            // try to open the device
             fd = open(devPath.native().c_str(), O_RDWR);
             if(fd == -1) {
                 throw std::system_error(errno, std::generic_category(), "open rpmsg_chrdev");
+            }
+
+            // if a handler class was specified for the channel, instantiate it
+            if(detail.makeHandler) {
+                // provide detailed logging if handler init fails
+                try {
+                    detail.makeHandler(fd, lrpc, handler);
+
+                    if(!handler) {
+                        throw std::runtime_error(fmt::format("invalid handler for '{}'", detail.name));
+                    }
+                } catch(const std::exception &e) {
+                    PLOG_ERROR << "makeHandler failed: " << e.what();
+
+                    throw;
+                }
             }
 
             // insert an info struct for it
@@ -153,11 +195,18 @@ void Coprocessor::initRpc() {
                 .epName = detail.name,
                 .chrdevPath = devPath,
                 .chrdevFd = fd,
-                .isRetrievable = !!detail.isRetrievable
+                .isRetrievable = !!detail.isRetrievable,
+                .handler = handler,
             });
         } catch(const std::exception &e) {
             PLOG_FATAL << "failed to initialize rpc endpoint '" << detail.name << "': "
                        << e.what();
+
+            if(fd != -1) {
+                // ensure we don't leak the fd (if handler can't initialize)
+                close(fd);
+            }
+
             throw;
         }
     }

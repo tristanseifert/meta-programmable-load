@@ -21,7 +21,7 @@
 
 #include "Coprocessor.h"
 #include "Watchdog.h"
-//#include "RpcServer.h"
+#include "RpcServer.h"
 #include "version.h"
 
 /// Whether the server shall continue to listen and process requests
@@ -104,6 +104,7 @@ int main(const int argc, char * const * argv) {
     std::filesystem::path fwPath{"/tmp/balls.elf"};
 
     std::unique_ptr<Coprocessor> cop;
+    std::shared_ptr<RpcServer> lrpc;
 
     // parse command line
     // TODO: do this
@@ -119,8 +120,9 @@ int main(const int argc, char * const * argv) {
         cop->loadFirmware(fwPath);
         cop->start();
 
-        // set up communications
+        // set up the local RPC server
         InitLibevent();
+        lrpc = std::make_shared<RpcServer>();
 
         /*
          * Insert a short wait before we try to enable the RPC interface. This is required because
@@ -130,8 +132,8 @@ int main(const int argc, char * const * argv) {
          * If we don't have this wait, the rpmsg subsystem won't have initialized, and we'll fail
          * to open the control device.
          */
-        std::this_thread::sleep_for (std::chrono::milliseconds(500));
-        cop->initRpc();
+        std::this_thread::sleep_for(std::chrono::milliseconds(420));
+        cop->initRpc(lrpc);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to start loadd: " << e.what();
         return 1;
@@ -141,8 +143,7 @@ int main(const int argc, char * const * argv) {
     PLOG_DEBUG << "starting main loop";
 
     while(gRun) {
-        // TODO: implement
-        break;
+        lrpc->run();
     }
 
     // perform cleanup
@@ -152,6 +153,9 @@ int main(const int argc, char * const * argv) {
         // shut down the coprocessor
         cop->stop();
         cop.reset();
+
+        // kill the RPC server
+        lrpc.reset();
 
         // perform other clean-up
     } catch(const std::exception &e) {

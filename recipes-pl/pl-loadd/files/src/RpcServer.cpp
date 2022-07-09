@@ -357,8 +357,9 @@ void RpcServer::abortClient(struct bufferevent *ev) {
  * @brief Handle a signal that indicates the process should terminate
  */
 void RpcServer::handleTermination() {
-    PLOG_INFO << "Received signal, terminating...";
+    PLOG_WARNING << "Received signal, terminating...";
 
+    // break out of the main loop and initiate shutdown
     gRun = false;
     event_base_loopbreak(this->evbase);
 }

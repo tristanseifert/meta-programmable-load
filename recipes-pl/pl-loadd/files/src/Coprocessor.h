@@ -5,10 +5,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
+
+class RpcServer;
 
 /**
  * @brief Coprocessor wrapper class
@@ -17,6 +20,32 @@
  * to load the firmware, and start/stop the processor.
  */
 class Coprocessor {
+    public:
+        /**
+         * @brief Abstract base class for coprocessor endpoint handlers
+         *
+         * An interface to be implemented by all message handlers for RPC endpoints.
+         */
+        class EndpointHandler {
+            public:
+                /**
+                 * @brief Instantiate a new endpoint handler
+                 *
+                 * @param fd File descriptor of the rpmsg_chrdev for this endpoint
+                 *
+                 * @remark Ownership over the file descriptor is retained by the `Coprocessor`
+                 *         class; you shouldn't try to close it yourself.
+                 */
+                EndpointHandler(const int fd) : remoteEp(fd) {
+
+                }
+                virtual ~EndpointHandler() = default;
+
+            protected:
+                /// File descriptor of the rpmsg_chrdev we'll handle messages for
+                int remoteEp;
+        };
+
     public:
         ~Coprocessor();
 
@@ -44,7 +73,7 @@ class Coprocessor {
             this->setState(State::Stopped);
         }
 
-        void initRpc();
+        void initRpc(const std::shared_ptr<RpcServer> &lrpc);
 
     private:
         /**
@@ -63,6 +92,20 @@ class Coprocessor {
             uint32_t isLoadControl:1{0};
             /// Can this endpoint be directly retrieved by another task?
             uint32_t isRetrievable:1{0};
+
+            /**
+             * @brief Handler instantiation callback
+             *
+             * If specified, this callback should allocate a handler class (which implements the
+             * `EndpointHandler` interface) and return it. This handler is responsible for
+             * processing all incoming messages on the endpoint.
+             *
+             * @param fd File descriptor of the rpmsg_chrdev
+             * @param lrpc Local RPC server (to get libevent loop from)
+             * @param outHandler Variable to receive the initialized handler
+             */
+            void (*makeHandler)(const int fd, const std::shared_ptr<RpcServer> &lrpc,
+                    std::shared_ptr<EndpointHandler> &outHandler);
         };
 
         /**
@@ -78,6 +121,9 @@ class Coprocessor {
 
             /// can this channel be retrieved via RPC?
             bool isRetrievable{false};
+
+            /// Handler for messages on this endpoint
+            std::shared_ptr<EndpointHandler> handler;
         };
 
         /// Set the state of the coprocessor
@@ -120,22 +166,7 @@ class Coprocessor {
         /// Number of endpoints to establish devices for
         constexpr static const size_t kNumRpcEndpoints{2};
         /// RPC endpoints to establish during connection
-        constexpr static const std::array<EndpointInfo, kNumRpcEndpoints> kRpcChannels{{
-            /// load control (consumed by loadd)
-            {
-                .name = "pl.control",
-                .address = 0x420,
-                .isLoadControl = true,
-                .isRetrievable = false,
-            },
-            /// Interface to confd
-            {
-                .name = "confd",
-                .address = 0x421,
-                .isLoadControl = false,
-                .isRetrievable = true,
-            },
-        }};
+        static const std::array<EndpointInfo, kNumRpcEndpoints> kRpcChannels;
 
         /// Path of the "firmware base path" sysfs variable
         constexpr static const std::string_view kFirmwareSysfsBase{"/sys/module/firmware_class/parameters/"};

@@ -33,6 +33,16 @@ class RpcServer {
 
         void run();
 
+        /**
+         * @brief Get libevent main loop
+         *
+         * Return a pointer to the libevent based main loop run by the RPC server; this can be used
+         * to add additional event sources to the loop, for example for remote message handlers.
+         */
+        inline auto getEvBase() {
+            return this->evbase;
+        }
+
     private:
         /**
          * @brief Information for a single connected client
