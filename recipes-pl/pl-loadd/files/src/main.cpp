@@ -62,7 +62,7 @@ static void InitLog(const plog::Severity level, const bool simple) {
         }
     }
 
-    PLOG_VERBOSE << "Logging initialized - loadd " << kVersion << " (" << kVersionGitHash << ")";
+    PLOG_INFO << "Starting loadd " << kVersion << " (" << kVersionGitHash << ")";
 }
 
 /**
