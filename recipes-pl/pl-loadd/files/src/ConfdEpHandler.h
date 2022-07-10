@@ -1,8 +1,10 @@
 #ifndef CONFDEPHANDLER_H
 #define CONFDEPHANDLER_H
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -28,7 +30,16 @@ class ConfdEpHandler: public Coprocessor::EndpointHandler {
 
         void handleRpmsgRead(struct bufferevent *bev);
 
+        static void DumpPacket(const std::string_view &what, std::span<const std::byte> packet);
+
     private:
+        /// Should confd received packets be dumped to log?
+        constexpr static const bool kDumpConfdPackets{true};
+        /// Should rpmsg received packets be dumped to log?
+        constexpr static const bool kDumpRpmsgPackets{true};
+
+        /// when set, the socket needs to be re-created for the next request
+        std::atomic_bool needsNewSocket{false};
         /// File descriptor of our client connection to confd
         int confdSocket{-1};
         /// event wrapping the confd socket
@@ -42,6 +53,8 @@ class ConfdEpHandler: public Coprocessor::EndpointHandler {
 
         /// Read buffer for messages from confd
         std::vector<std::byte> confdRxBuf;
+        /// Read buffer for messages from rpmsg
+        std::vector<std::byte> rpmsgRxBuf;
 };
 
 #endif

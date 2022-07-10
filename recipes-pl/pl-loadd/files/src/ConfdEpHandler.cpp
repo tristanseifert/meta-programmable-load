@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 
 #include <cerrno>
+#include <sstream>
 #include <system_error>
 
 #include <event2/event.h>
@@ -183,8 +184,6 @@ void ConfdEpHandler::handleConfdRead(struct bufferevent *bev) {
 
     // pull it out and into our read buffer
     auto buf = bufferevent_get_input(bev);
-    PLOG_VERBOSE << "rx from confd: " << evbuffer_get_length(buf);
-
     const size_t pending = evbuffer_get_length(buf);
 
     this->confdRxBuf.resize(pending);
@@ -194,6 +193,9 @@ void ConfdEpHandler::handleConfdRead(struct bufferevent *bev) {
         throw std::runtime_error("failed to drain confd read buffer");
     }
 
+    if(kDumpRpmsgPackets) {
+        DumpPacket(">>> confd", this->confdRxBuf);
+    }
 
     // send it (TODO: why can't we write using bufferevent?)
     err = write(this->remoteEp, this->confdRxBuf.data(), this->confdRxBuf.size());
@@ -209,6 +211,9 @@ void ConfdEpHandler::handleConfdEvent(struct bufferevent *bev, const uintptr_t f
     // connection closed
     if(flags & BEV_EVENT_EOF) {
         PLOG_WARNING << "confd closed connection :(";
+
+        this->needsNewSocket = true;
+        this->confdSocket = 0;
     }
     // IO error
     else if(flags & BEV_EVENT_ERROR) {
@@ -226,21 +231,57 @@ void ConfdEpHandler::handleRpmsgRead(struct bufferevent *bev) {
     int err{0};
 
     auto buf = bufferevent_get_input(bev);
-    PLOG_VERBOSE << "rx from rpmsg: " << evbuffer_get_length(buf);
-
     const size_t pending = evbuffer_get_length(buf);
 
-    this->confdRxBuf.resize(pending);
-    int read = evbuffer_remove(buf, static_cast<void *>(this->confdRxBuf.data()), pending);
+    this->rpmsgRxBuf.resize(pending);
+    int read = evbuffer_remove(buf, static_cast<void *>(this->rpmsgRxBuf.data()), pending);
 
     if(read == -1) {
         throw std::runtime_error("failed to drain confd read buffer");
     }
 
+    if(kDumpRpmsgPackets) {
+        DumpPacket(">>> rpmsg", this->rpmsgRxBuf);
+    }
+
+    // re-create confd socket if needed
+    bool yes{true}, no{false};
+    if(this->needsNewSocket.compare_exchange_strong(yes, no)) {
+        // make the socket…
+        this->confdSocket = this->connectToConfd();
+        PLOG_VERBOSE << "re-created confd client socket: " << this->confdSocket;
+
+        // …and replace it on the bufevent
+        err = bufferevent_setfd(this->confdBev, this->confdSocket);
+        if(err) {
+            throw std::runtime_error("bufferevent_setfd failed");
+        }
+    }
+
     // send it
-    err = bufferevent_write(this->confdBev, this->confdRxBuf.data(), pending);
+    err = bufferevent_write(this->confdBev, this->rpmsgRxBuf.data(), pending);
 
     if(err != 0) {
         throw std::runtime_error("failed to write confd->m4 message");
     }
+}
+
+
+
+/**
+ * @brief Dump a packet to the debug output
+ *
+ * @param what Description of the packet
+ * @param packet Packet data to hexdump
+ */
+void ConfdEpHandler::DumpPacket(const std::string_view &what, std::span<const std::byte> packet) {
+    std::stringstream str;
+    for(size_t i = 0; i < packet.size(); i++) {
+        str << fmt::format("{:02x} ", packet[i]);
+        if(i && !(i % 16)) {
+            str << std::endl;
+        }
+    }
+
+    PLOG_DEBUG << what << ":" << std::endl << str.str();
 }
