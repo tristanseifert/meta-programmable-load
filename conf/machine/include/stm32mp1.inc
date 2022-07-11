@@ -59,34 +59,15 @@ IMAGE_INSTALL:append = " libubootenv libubootenv-bin "
 
 # various generally useful libraries
 IMAGE_INSTALL:append = " \
-    libjpeg-turbo libpng libusb1 libsocketcan \
+    libsocketcan \
 "
 
 # UI libraries
 # boot-splash: Custom bootup splash screen
-# TODO: define custom modes for LCD (fbset-modes overlay)
-# cairo: generic graphics library
-# freetype: TTF rendering
-# harfbuzz: Text shaping engine
-# pango: Text rendering engine
 # qrencode: rendering of qr codes
 IMAGE_INSTALL:append = " \
     boot-splash \
-    cairo freetype harfbuzz pango \
     qrencode \
-"
-
-# fonts for GUI
-# TODO: pare down which ones we'll actually use
-# gentium: serif-y
-# liberation: font family (sans, sans narrow, serif, mono)
-# inconsolata: monospaced font
-# dinish: DIN-style font
-IMAGE_INSTALL:append = " \
-    ttf-gentium \
-    ttf-liberation-sans ttf-liberation-sans-narrow ttf-liberation-serif ttf-liberation-mono \
-    ttf-inconsolata \
-    ttf-dinish \
 "
 
 ##### custom programmable load stuff
