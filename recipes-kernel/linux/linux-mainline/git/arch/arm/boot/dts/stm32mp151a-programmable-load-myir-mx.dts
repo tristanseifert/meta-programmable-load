@@ -313,23 +313,23 @@
 
 	m4_i2c1_pins_mx: m4_i2c1_mx-0 {
 		pins {
-			pinmux = <STM32_PINMUX('F', 14, RSVD)>, /* I2C1_SCL */
-					 <STM32_PINMUX('F', 15, RSVD)>; /* I2C1_SDA */
+			pinmux = <STM32_PINMUX('F', 14, AF5)>, /* I2C1_SCL */
+					 <STM32_PINMUX('F', 15, AF5)>; /* I2C1_SDA */
 		};
 	};
 
 	m4_spi5_pins_mx: m4_spi5_mx-0 {
 		pins {
-			pinmux = <STM32_PINMUX('F', 11, RSVD)>, /* SPI5_MOSI */
-					 <STM32_PINMUX('H', 6, RSVD)>, /* SPI5_SCK */
-					 <STM32_PINMUX('H', 7, RSVD)>; /* SPI5_MISO */
+			pinmux = <STM32_PINMUX('F', 11, AF5)>, /* SPI5_MOSI */
+					 <STM32_PINMUX('H', 6, AF5)>, /* SPI5_SCK */
+					 <STM32_PINMUX('H', 7, AF5)>; /* SPI5_MISO */
 		};
 	};
 
 	m4_uart5_pins_mx: m4_uart5_mx-0 {
 		pins {
-			pinmux = <STM32_PINMUX('B', 5, RSVD)>, /* UART5_RX */
-					 <STM32_PINMUX('B', 13, RSVD)>; /* UART5_TX */
+			pinmux = <STM32_PINMUX('B', 5, AF12)>, /* UART5_RX */
+					 <STM32_PINMUX('B', 13, AF14)>; /* UART5_TX */
 		};
 	};
 
@@ -828,6 +828,7 @@
 	/* USER CODE END ltdc */
 };
 
+// for aux analog in
 &m4_adc{
 	status = "okay";
 
@@ -842,6 +843,7 @@
 	/* USER CODE END m4_crc2 */
 };
 
+// for aux analog out
 &m4_dac{
 	pinctrl-names = "default";
 	pinctrl-0 = <&m4_dac1_pins_mx>;
@@ -858,6 +860,7 @@
 	/* USER CODE END m4_dma2 */
 };
 
+// analog board low speed control
 &m4_i2c1{
 	pinctrl-names = "default";
 	pinctrl-0 = <&m4_i2c1_pins_mx>;
@@ -874,6 +877,7 @@
 	/* USER CODE END m4_rng2 */
 };
 
+// analog board high speed control
 &m4_spi5{
 	pinctrl-names = "default";
 	pinctrl-0 = <&m4_spi5_pins_mx>;
@@ -1181,26 +1185,6 @@
                 remote_endpoint = <&ltdc_ep0_out>;
             };
         };
-    };
-
-    // front panel rotary encoder
-    front-encoder@4 {
-        compatible = "rotary-encoder";
-        status = "okay";
-
-        linux,axis = <0>; // REL_X
-
-        // set up the GPIOs
-        //pinctrl-names = "default";
-        //pinctrl-0 = <&front_encoder_pins>;
-
-        // specify GPIOs connected to encoder ("A" and "B" lines)
-        gpios = <&gpioa 4 0>, <&gpioa 6 0>;
-
-        // specify encoder config
-        rotary-encoder,encoding = "gray"; // gray code
-        rotary-encoder,steps = <24>; // steps per rotation
-        rotary-encoder,steps-per-period = <1>; // full period mode
     };
 
     // LEDs connected to GPIOs

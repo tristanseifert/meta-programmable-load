@@ -1,0 +1,46 @@
+From d3fa98b4e8fe0ba44d6921c3296bc8d22e640c7a Mon Sep 17 00:00:00 2001
+From: Tristan Seifert <tristan@tseifert.me>
+Date: Sun, 10 Jul 2022 19:04:56 -0700
+Subject: [PATCH 2/2] update remoteproc_core to probe srm on init
+
+---
+ drivers/remoteproc/remoteproc_core.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/remoteproc/remoteproc_core.c b/drivers/remoteproc/remoteproc_core.c
+index 775df165eb45..df31b9222b38 100644
+--- a/drivers/remoteproc/remoteproc_core.c
++++ b/drivers/remoteproc/remoteproc_core.c
+@@ -38,6 +38,7 @@
+ #include <linux/of_reserved_mem.h>
+ #include <linux/virtio_ids.h>
+ #include <linux/virtio_ring.h>
++#include <linux/of_platform.h>
+ #include <asm/byteorder.h>
+ #include <linux/platform_device.h>
+ 
+@@ -2356,6 +2357,11 @@ int rproc_add(struct rproc *rproc)
+ 	/* create debugfs entries */
+ 	rproc_create_debug_dir(rproc);
+ 
++	/* add resource manager device */
++	ret = devm_of_platform_populate(dev->parent);
++	if (ret < 0)
++		return ret;
++
+ 	/* if rproc is marked always-on, request it to boot */
+ 	if (rproc->auto_boot) {
+ 		ret = rproc_trigger_auto_boot(rproc);
+@@ -2637,6 +2643,8 @@ int rproc_del(struct rproc *rproc)
+ 	list_del_rcu(&rproc->node);
+ 	mutex_unlock(&rproc_list_mutex);
+ 
++	of_platform_depopulate(rproc->dev.parent);
++
+ 	/* Ensure that no readers of rproc_list are still active */
+ 	synchronize_rcu();
+ 
+-- 
+2.32.1 (Apple Git-133)
+
+

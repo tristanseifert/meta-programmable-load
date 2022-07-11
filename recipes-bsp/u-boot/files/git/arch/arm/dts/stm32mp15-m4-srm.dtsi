@@ -6,6 +6,8 @@
 
 &m4_rproc {
 	m4_system_resources {
+                compatible = "rproc-srm-core";
+                status = "disabled";
 		#address-cells = <1>;
 		#size-cells = <0>;
 
