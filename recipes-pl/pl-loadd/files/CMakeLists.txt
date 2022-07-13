@@ -27,7 +27,6 @@ endif()
 ###############
 # Find our dependencies
 find_package(PkgConfig REQUIRED)
-find_package(Git REQUIRED)
 
 find_package(SQLite3 REQUIRED)
 
