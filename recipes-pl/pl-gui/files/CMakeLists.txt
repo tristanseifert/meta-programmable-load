@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-Wall -Wmissing-declarations -Wformat=2 -fdiagnostics-color=always -Wundef
-    -Wcast-qual -Wwrite-strings -Wno-format-nonliteral)
+    -Wwrite-strings -Wno-format-nonliteral)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     add_compile_options(-Werror -Wimplicit-fallthrough -Wno-deprecated-copy -Wno-address-of-packed-member
@@ -28,14 +28,31 @@ find_package(PkgConfig REQUIRED)
 
 pkg_search_module(PKG_LIBCBOR REQUIRED libcbor)
 link_directories(${PKG_LIBCBOR_LIBRARY_DIRS})
+include_directories(${PKG_LIBCBOR_INCLUDE_DIRS})
 
 pkg_search_module(PKG_LIBEVENT REQUIRED libevent)
 link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
+include_directories(${PKG_LIBEVENT_INCLUDE_DIRS})
+
+pkg_search_module(PKG_PNG REQUIRED libpng)
+link_directories(${PKG_PNG_LIBRARY_DIRS})
+include_directories(${PKG_PNG_INCLUDE_DIRS})
+
+pkg_search_module(PKG_FREETYPE REQUIRED freetype2)
+link_directories(${PKG_FREETYPE_LIBRARY_DIRS})
+include_directories(${PKG_FREETYPE_INCLUDE_DIRS})
+
+pkg_search_module(PKG_LIBDRM REQUIRED libdrm)
+link_directories(${PKG_LIBDRM_LIBRARY_DIRS})
+include_directories(${PKG_LIBDRM_INCLUDE_DIRS})
 
 # Remote dependencies (as submodules)
 #add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
+
+set(LV_CONF_PATH ${CMAKE_CURRENT_LIST_DIR}/include/lvgl/lv_conf.h CACHE FILEPATH "" FORCE)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/lvgl EXCLUDE_FROM_ALL)
 
 ###############
 # Create version file
@@ -49,6 +66,10 @@ execute_process(
 
 set(VERSION_FILE ${CMAKE_CURRENT_BINARY_DIR}/version.c)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/src/version.c.in ${VERSION_FILE} @ONLY)
+
+###############
+# add more warning flags for our own code
+add_compile_options(-Wcast-qual)
 
 ###############
 # User interface app
@@ -67,6 +88,9 @@ target_link_libraries(gui PRIVATE confd plog::plog fmt::fmt)
 
 target_include_directories(gui PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS})
 target_link_libraries(gui PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES})
+# gui libraries
+target_link_libraries(gui PRIVATE ${PKG_PNG_LIBRARIES} ${PKG_FREETYPE_LIBRARIES} lvgl::lvgl)
+
 
 INSTALL(TARGETS gui RUNTIME DESTINATION /usr/sbin)
 

@@ -2,7 +2,7 @@ SUMMARY = "Programmable load user interface"
 LICENSE = "ISC"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/ISC;md5=f3b90e78ea0cffb20bf5cca7947a896d"
 PR = "r0"
-DEPENDS = "pl-app-meta pl-loadd pl-confd libcbor systemd libevent libdrm"
+DEPENDS = "pl-app-meta pl-loadd pl-confd libcbor systemd libevent libdrm libpng freetype"
 RDEPENDS:${PN} = "libsystemd"
 
 # package is built using CMake
