@@ -22,3 +22,9 @@
 [submodule "recipes-pl/pl-loadd/files/lib/fmt"]
 	path = recipes-pl/pl-loadd/files/lib/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "recipes-pl/pl-gui/files/libs/plog"]
+	path = recipes-pl/pl-gui/files/lib/plog
+	url = https://github.com/SergiusTheBest/plog.git
+[submodule "recipes-pl/pl-gui/files/libs/fmt"]
+	path = recipes-pl/pl-gui/files/lib/fmt
+	url = https://github.com/fmtlib/fmt.git
