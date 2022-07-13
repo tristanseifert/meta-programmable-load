@@ -22,6 +22,8 @@ class Gui {
     private:
         void initEvents();
 
+        void initDisplay();
+
     private:
         /// Tick interval, in microseconds
         constexpr static const size_t kTickInterval{4'000};
@@ -37,6 +39,13 @@ class Gui {
         struct event *tickEvent{nullptr};
         /// timer callback event
         struct event *timerEvent{nullptr};
+
+        /// Display driver reference
+        struct _lv_disp_drv_t *dispDriver{nullptr};
+        /// Buffer used by the underlying display driver
+        struct _lv_disp_draw_buf_t *dispBuffer{nullptr};
+        /// Display instance
+        struct _lv_disp_t *disp{nullptr};
 };
 
 #endif

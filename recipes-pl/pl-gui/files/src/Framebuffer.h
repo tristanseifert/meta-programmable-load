@@ -42,7 +42,7 @@ class Framebuffer {
          *
          * @return Framebuffer stride, in bytes
          */
-        inline const size_t getStride(const size_t idx) {
+        inline const size_t getStride(const size_t idx) const {
             return this->kmsBuffers.at(idx).stride;
         }
 
@@ -65,12 +65,42 @@ class Framebuffer {
          *
          * @return A pair containing (width, height) of the framebuffer object
          */
-        inline auto getSize(const size_t idx) {
+        inline auto getSize(const size_t idx) const {
             return this->kmsBuffers.at(idx).pixelSize;
+        }
+
+        /**
+         * @brief Get the display output dimensions
+         *
+         * This returns the dimensions of the first framebuffer. It assumes both framebuffers have
+         * the same size.
+         *
+         * @return A pair containing the (width, height) of the output framebuffer
+         */
+        inline auto getSize() const {
+            return this->getSize(0);
+        }
+
+        /**
+         * @brief Get framebuffer index for buffer ptr
+         *
+         * Determine which of our underlying framebuffers the given framebuffer ptr falls into.
+         *
+         * @param ptr Pointer to the start of the buffer
+         *
+         * @return Associated framebuffer index
+         */
+        inline size_t indexForFb(const void *ptr) const {
+            return (this->kmsBuffers[0].fb == ptr) ? 0 : 1;
         }
 
         uint32_t addSwapCallback(const SwapCallback &cb);
         void removeSwapCallback(const uint32_t token);
+
+        uint32_t addVBlankCallback(const SwapCallback &cb);
+        void removeVBlankCallback(const uint32_t token);
+
+        void requestFbFlip(const size_t newFbIndex);
 
     private:
         /**
@@ -107,8 +137,8 @@ class Framebuffer {
 
         Buffer createBo(const struct _drmModeModeInfo &mode);
         void handleEvents();
-        void requestFbFlip(const size_t newFbIndex);
         static void PageFlipHandler(int, unsigned int, unsigned int, unsigned int, void *);
+        static void VBlankHandler(int, unsigned int, unsigned int, unsigned int, void *);
 
         static std::string GetConnectorName(struct _drmModeConnector *);
 
@@ -147,8 +177,10 @@ class Framebuffer {
 
         /// Page flip (swap) callbacks
         std::unordered_map<uint32_t, SwapCallback> swapCallbacks;
+        /// VBlank callbacks
+        std::unordered_map<uint32_t, SwapCallback> vblankCallbacks;
         /// Token value for the next swap callback to be inserted
-        uint32_t swapCallbackToken{0};
+        uint32_t nextCallbackToken{0};
 };
 
 #endif

@@ -3,6 +3,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <sstream>
@@ -254,6 +255,7 @@ void Framebuffer::initKms() {
 
     // create the first buffer object and framebuffer
     this->kmsBuffers[0] = this->createBo(mode);
+    PLOG_VERBOSE << fmt::format("fb0={}", this->kmsBuffers[0].fb);
 
     err = drmModeAddFB(this->driFd, mode.hdisplay, mode.vdisplay, 24, 32,
             this->kmsBuffers[0].stride, this->kmsBuffers[0].handle, &this->fbIds[0]);
@@ -275,6 +277,7 @@ void Framebuffer::initKms() {
 
     // create another buffer object and framebuffer as the backbuffer
     this->kmsBuffers[1] = this->createBo(mode);
+    PLOG_VERBOSE << fmt::format("fb1={}", this->kmsBuffers[1].fb);
 
     err = drmModeAddFB(this->driFd, mode.hdisplay, mode.vdisplay, 24, 32,
             this->kmsBuffers[1].stride, this->kmsBuffers[1].handle, &this->fbIds[1]);
@@ -291,6 +294,7 @@ void Framebuffer::initKms() {
     memset(this->pageFlipEvent, 0, sizeof(*this->pageFlipEvent));
 
     this->pageFlipEvent->version = DRM_EVENT_CONTEXT_VERSION;
+    this->pageFlipEvent->vblank_handler = Framebuffer::VBlankHandler;
     this->pageFlipEvent->page_flip_handler = Framebuffer::PageFlipHandler;
 }
 
@@ -364,6 +368,10 @@ Framebuffer::Buffer Framebuffer::createBo(const drmModeModeInfo &mode) {
         throw std::system_error(errno, std::generic_category(), "kms_bo_map");
     }
 
+    // zeroise it
+    auto writePtr = reinterpret_cast<uint8_t *>(buf.fb);
+    std::fill(writePtr, writePtr + (buf.stride * mode.vdisplay), 0);
+
     return buf;
 }
 
@@ -408,13 +416,25 @@ void Framebuffer::PageFlipHandler(int fd, unsigned int seq, unsigned int tv_sec,
     auto fb = reinterpret_cast<Framebuffer *>(ctx);
     const auto nextFb = fb->currentFb ? 0 : 1;
 
-    // invoke callbacks (TODO: validate buffer offset is right)
+    // invoke callbacks (TODO: validate buffer index is right)
     for(const auto &[token, cb] : fb->swapCallbacks) {
         cb(nextFb);
     }
+}
 
-    // flip to the other buffer
-    fb->requestFbFlip(nextFb);
+/**
+ * @brief VBlank callback
+ *
+ * Invoked from the event loop, when we encounter a vertical blanking interval.
+ */
+void Framebuffer::VBlankHandler(int fd, unsigned int seq, unsigned int tv_sec,
+        unsigned int tv_usec, void *ctx) {
+    auto fb = reinterpret_cast<Framebuffer *>(ctx);
+    const auto nextFb = fb->currentFb ? 0 : 1;
+
+    for(const auto &[token, cb] : fb->vblankCallbacks) {
+        cb(nextFb);
+    }
 }
 
 
@@ -462,7 +482,7 @@ uint32_t Framebuffer::addSwapCallback(const SwapCallback &cb) {
     uint32_t token{0};
 
     do {
-        token = ++this->swapCallbackToken;
+        token = ++this->nextCallbackToken;
     } while(!token);
 
     this->swapCallbacks.emplace(token, cb);
@@ -477,6 +497,34 @@ uint32_t Framebuffer::addSwapCallback(const SwapCallback &cb) {
  */
 void Framebuffer::removeSwapCallback(const uint32_t token) {
     this->swapCallbacks.erase(token);
+}
+
+/**
+ * @brief Install a VBlank callback
+ *
+ * @param cb Callback function to install
+ *
+ * @return A token that can be used to remove the callback later
+ */
+uint32_t Framebuffer::addVBlankCallback(const SwapCallback &cb) {
+    uint32_t token{0};
+
+    do {
+        token = ++this->nextCallbackToken;
+    } while(!token);
+
+    this->vblankCallbacks.emplace(token, cb);
+
+    return token;
+}
+
+/**
+ * @brief Remove a previously installed vblank callback
+ *
+ * @param token A swap callback token as returned by addVBlankCallback
+ */
+void Framebuffer::removeVBlankCallback(const uint32_t token) {
+    this->vblankCallbacks.erase(token);
 }
 
 
