@@ -58,6 +58,8 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
 set(LV_CONF_PATH ${CMAKE_CURRENT_LIST_DIR}/include/lvgl/lv_conf.h CACHE FILEPATH "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/lvgl EXCLUDE_FROM_ALL)
 
+target_link_libraries(lvgl PUBLIC ${PKG_FREETYPE_LIBRARIES})
+
 ###############
 # Create version file
 find_package(Git REQUIRED)
@@ -82,6 +84,7 @@ add_executable(gui
     src/main.cpp
     src/EventLoop.cpp
     src/Framebuffer.cpp
+    src/Gui.cpp
     src/Watchdog.cpp
 )
 
@@ -96,8 +99,8 @@ target_include_directories(gui PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBO
 target_link_libraries(gui PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES})
 # gui libraries
 target_link_libraries(gui PRIVATE ${PKG_PNG_LIBRARIES} ${PKG_FREETYPE_LIBRARIES}
-    ${PKG_LIBDRM_LIBRARIES} ${PKG_LIBKMS_LIBRARIES})
-#    ${PKG_LIBDRM_LIBRARIES} lvgl::lvgl)
+    ${PKG_LIBDRM_LIBRARIES} ${PKG_LIBKMS_LIBRARIES} lvgl::lvgl)
+target_link_options(gui PRIVATE ${PKG_FREETYPE_LDFLAGS})
 
 
 INSTALL(TARGETS gui RUNTIME DESTINATION /usr/sbin)

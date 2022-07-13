@@ -15,6 +15,7 @@
 
 #include "EventLoop.h"
 #include "Framebuffer.h"
+#include "Gui.h"
 #include "Watchdog.h"
 #include "version.h"
 
@@ -89,6 +90,8 @@ static void InitLibevent() {
 int main(const int argc, char * const * argv) {
     std::shared_ptr<EventLoop> ev;
     std::shared_ptr<Framebuffer> fb;
+    std::shared_ptr<Gui> gui;
+
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
 
@@ -166,11 +169,18 @@ int main(const int argc, char * const * argv) {
         fb = std::make_shared<Framebuffer>(ev, "/dev/dri/card0");
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up drm: " << e.what();
-        return -1;
+        return 1;
     }
 
     // initialize GUI
-    // TODO: implement this
+    PLOG_DEBUG << "initializing gui";
+
+    try {
+        gui = std::make_shared<Gui>(ev, fb);
+    } catch(const std::exception &e) {
+        PLOG_FATAL << "failed to set up gui: " << e.what();
+        return 1;
+    }
 
     // run event loop
     PLOG_DEBUG << "entering main loop";
@@ -184,7 +194,7 @@ int main(const int argc, char * const * argv) {
     }
 
     // clean up GUI
-    // TODO: implement this
+    gui.reset();
 
     // clean up DRM resources
     PLOG_DEBUG << "cleaning up drm resources";

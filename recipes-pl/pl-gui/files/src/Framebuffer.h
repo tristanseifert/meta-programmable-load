@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -21,6 +22,16 @@ class EventLoop;
  */
 class Framebuffer {
     public:
+        /**
+         * @brief Type of a buffer swap callback
+         *
+         * This type defines the user-defined callback that's invoked when we handle a buffer swap
+         * event.
+         *
+         * @param fbIndex Index of the buffer to use for drawing
+         */
+        using SwapCallback = std::function<void(size_t fbIndex)>;
+
         Framebuffer(const std::shared_ptr<EventLoop> &ev, const std::string_view path);
         ~Framebuffer();
 
@@ -57,6 +68,9 @@ class Framebuffer {
         inline auto getSize(const size_t idx) {
             return this->kmsBuffers.at(idx).pixelSize;
         }
+
+        uint32_t addSwapCallback(const SwapCallback &cb);
+        void removeSwapCallback(const uint32_t token);
 
     private:
         /**
@@ -130,6 +144,11 @@ class Framebuffer {
         std::weak_ptr<EventLoop> ev;
         /// Event for handling drm messages
         struct event *drmEvent{nullptr};
+
+        /// Page flip (swap) callbacks
+        std::unordered_map<uint32_t, SwapCallback> swapCallbacks;
+        /// Token value for the next swap callback to be inserted
+        uint32_t swapCallbackToken{0};
 };
 
 #endif

@@ -406,9 +406,15 @@ void Framebuffer::requestFbFlip(const size_t index) {
 void Framebuffer::PageFlipHandler(int fd, unsigned int seq, unsigned int tv_sec,
         unsigned int tv_usec, void *ctx) {
     auto fb = reinterpret_cast<Framebuffer *>(ctx);
+    const auto nextFb = fb->currentFb ? 0 : 1;
+
+    // invoke callbacks (TODO: validate buffer offset is right)
+    for(const auto &[token, cb] : fb->swapCallbacks) {
+        cb(nextFb);
+    }
 
     // flip to the other buffer
-    fb->requestFbFlip(fb->currentFb ? 0 : 1);
+    fb->requestFbFlip(nextFb);
 }
 
 
@@ -439,6 +445,39 @@ std::string Framebuffer::GetConnectorName(drmModeConnectorPtr connector) {
     return st.str();
 }
 
+
+
+/**
+ * @brief Install a buffer swap callback
+ *
+ * Add a callback that's invoked during vertical blanking, after we've switched to output a
+ * framebuffer for drawing. The alternate buffer is used as a back buffer to draw to with no
+ * performance penalty or visual artifacts.
+ *
+ * @param cb Callback function to install
+ *
+ * @return A token that can be used to remove the callback later
+ */
+uint32_t Framebuffer::addSwapCallback(const SwapCallback &cb) {
+    uint32_t token{0};
+
+    do {
+        token = ++this->swapCallbackToken;
+    } while(!token);
+
+    this->swapCallbacks.emplace(token, cb);
+
+    return token;
+}
+
+/**
+ * @brief Remove a previously installed buffer swap callback
+ *
+ * @param token A swap callback token as returned by addSwapCallback
+ */
+void Framebuffer::removeSwapCallback(const uint32_t token) {
+    this->swapCallbacks.erase(token);
+}
 
 
 /**
