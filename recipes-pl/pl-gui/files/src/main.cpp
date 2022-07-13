@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <memory>
 #include <iostream>
 
 #include <plog/Log.h>
@@ -12,6 +13,8 @@
 #include <plog/Formatters/TxtFormatter.h>
 #include <plog/Init.h>
 
+#include "EventLoop.h"
+#include "Framebuffer.h"
 #include "Watchdog.h"
 #include "version.h"
 
@@ -84,6 +87,8 @@ static void InitLibevent() {
  * cleaning up the drm stuff when we're done with all that.
  */
 int main(const int argc, char * const * argv) {
+    std::shared_ptr<EventLoop> ev;
+    std::shared_ptr<Framebuffer> fb;
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
 
@@ -149,12 +154,16 @@ int main(const int argc, char * const * argv) {
 
     Watchdog::Init();
 
+    ev = std::make_shared<EventLoop>();
+
     // set up RPC to loadd
     // TODO: implement this
 
     // set up drm (framebuffer)
-    try {
+    PLOG_DEBUG << "initializing drm";
 
+    try {
+        fb = std::make_shared<Framebuffer>(ev, "/dev/dri/card0");
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up drm: " << e.what();
         return -1;
@@ -163,14 +172,24 @@ int main(const int argc, char * const * argv) {
     // initialize GUI
     // TODO: implement this
 
-    // run GUI loop
-    try {
+    // run event loop
+    PLOG_DEBUG << "entering main loop";
 
+    try {
+        while(gRun) {
+            ev->run();
+        }
     } catch(const std::exception &e) {
         PLOG_FATAL << "exception in main loop: " << e.what();
     }
 
+    // clean up GUI
+    // TODO: implement this
+
     // clean up DRM resources
     PLOG_DEBUG << "cleaning up drm resources";
+    fb.reset();
 
+    // clean up everything else
+    ev.reset();
 }

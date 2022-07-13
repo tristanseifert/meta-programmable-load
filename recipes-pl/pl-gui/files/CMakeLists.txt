@@ -46,6 +46,10 @@ pkg_search_module(PKG_LIBDRM REQUIRED libdrm)
 link_directories(${PKG_LIBDRM_LIBRARY_DIRS})
 include_directories(${PKG_LIBDRM_INCLUDE_DIRS})
 
+pkg_search_module(PKG_LIBKMS REQUIRED libkms)
+link_directories(${PKG_LIBKMS_LIBRARY_DIRS})
+include_directories(${PKG_LIBKMS_INCLUDE_DIRS})
+
 # Remote dependencies (as submodules)
 #add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
@@ -76,6 +80,8 @@ add_compile_options(-Wcast-qual)
 add_executable(gui
     ${VERSION_FILE}
     src/main.cpp
+    src/EventLoop.cpp
+    src/Framebuffer.cpp
     src/Watchdog.cpp
 )
 
@@ -89,7 +95,9 @@ target_link_libraries(gui PRIVATE confd plog::plog fmt::fmt)
 target_include_directories(gui PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS})
 target_link_libraries(gui PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES})
 # gui libraries
-target_link_libraries(gui PRIVATE ${PKG_PNG_LIBRARIES} ${PKG_FREETYPE_LIBRARIES} lvgl::lvgl)
+target_link_libraries(gui PRIVATE ${PKG_PNG_LIBRARIES} ${PKG_FREETYPE_LIBRARIES}
+    ${PKG_LIBDRM_LIBRARIES} ${PKG_LIBKMS_LIBRARIES})
+#    ${PKG_LIBDRM_LIBRARIES} lvgl::lvgl)
 
 
 INSTALL(TARGETS gui RUNTIME DESTINATION /usr/sbin)

@@ -74,8 +74,8 @@ IMAGE_INSTALL:append = " \
 # root fs overlays (for app data)
 IMAGE_INSTALL:append = " pl-root-overlays"
 # general programmable load firmware stuff
-IMAGE_INSTALL:append = " pl-app-meta pl-confd"
+IMAGE_INSTALL:append = " pl-app-meta pl-confd pl-loadd"
 # real-time control firmware
 
 # user interface and remote
-IMAGE_INSTALL:append = " pl-loadd pl-pinballd"
+IMAGE_INSTALL:append = " pl-pinballd pl-gui"
