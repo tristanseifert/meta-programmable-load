@@ -42,6 +42,10 @@ pkg_search_module(PKG_FREETYPE REQUIRED freetype2)
 link_directories(${PKG_FREETYPE_LIBRARY_DIRS})
 include_directories(${PKG_FREETYPE_INCLUDE_DIRS})
 
+pkg_search_module(PKG_FONTCONFIG REQUIRED fontconfig)
+link_directories(${PKG_FONTCONFIG_LIBRARY_DIRS})
+include_directories(${PKG_FONTCONFIG_INCLUDE_DIRS})
+
 pkg_search_module(PKG_LIBDRM REQUIRED libdrm)
 link_directories(${PKG_LIBDRM_LIBRARY_DIRS})
 include_directories(${PKG_LIBDRM_INCLUDE_DIRS})
@@ -86,10 +90,12 @@ add_executable(gui
     src/Framebuffer.cpp
     src/Gui.cpp
     src/Watchdog.cpp
+    src/Gui/FontHandler.cpp
 )
 
 set_target_properties(gui PROPERTIES OUTPUT_NAME load-gui)
 
+target_include_directories(gui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
 target_include_directories(gui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(gui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/gui)
 target_link_libraries(gui PRIVATE confd plog::plog fmt::fmt)
@@ -99,7 +105,7 @@ target_include_directories(gui PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBO
 target_link_libraries(gui PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES})
 # gui libraries
 target_link_libraries(gui PRIVATE ${PKG_PNG_LIBRARIES} ${PKG_FREETYPE_LIBRARIES}
-    ${PKG_LIBDRM_LIBRARIES} ${PKG_LIBKMS_LIBRARIES} lvgl::lvgl)
+    ${PKG_LIBDRM_LIBRARIES} ${PKG_LIBKMS_LIBRARIES} ${PKG_FONTCONFIG_LIBRARIES} lvgl::lvgl)
 target_link_options(gui PRIVATE ${PKG_FREETYPE_LDFLAGS})
 
 
