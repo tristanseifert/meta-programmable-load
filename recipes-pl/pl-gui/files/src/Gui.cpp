@@ -35,7 +35,7 @@ Gui::Gui(const std::shared_ptr<EventLoop> &ev, const std::shared_ptr<Framebuffer
         throw std::runtime_error("lv_freetype_init failed");
     }
 
-    this->initDisplay();
+    this->initDisplayRotated(270);
     // TODO: set up input methods
 
     // create events
@@ -82,43 +82,57 @@ void Gui::initEvents() {
 }
 
 /**
- * @brief Initialize the display driver
+ * @brief Initialize the display driver (with rotation support)
  *
- * This creates a display driver that operates in direct mode, rendering straight to the output
- * framebuffers. The specified flush callback is responsible for copying all redrawn areas from
- * the framebuffer we just requested to output, to the currently displaying one.
+ * The display driver renders to an intermediate buffer, which is rotated and copied when drawing
+ * has completed.
+ *
+ * @param rotation Rotation angle (degrees; only 90, 180 and 270° are supported)
  */
-void Gui::initDisplay() {
+void Gui::initDisplayRotated(const size_t angle) {
+    // validate inputs
+    if(angle != 90 && angle != 180 && angle != 270) {
+        throw std::invalid_argument(fmt::format("invalid angle ({})", angle));
+    }
+    this->dispRotation = angle;
+
     // initialize the driver struct
     this->dispDriver = new lv_disp_drv_t;
     lv_disp_drv_init(this->dispDriver);
 
+    // allocate a buffer, and zero it such that it's all faulted in
     const auto &size = this->fb->getSize();
+    const auto numPixels = static_cast<size_t>(size.first) * static_cast<size_t>(size.second);
 
-    this->dispDriver->hor_res = size.first;
-    this->dispDriver->ver_res = size.second;
+    this->drawFramebuffer.resize(numPixels * 4, std::byte{0});
+
+    // set dimensions according to rotation
+    if(angle == 90 || angle == 270) {
+        this->dispDriver->hor_res = size.second;
+        this->dispDriver->ver_res = size.first;
+    } else {
+        this->dispDriver->hor_res = size.first;
+        this->dispDriver->ver_res = size.second;
+    }
+
+    // set up flush callback (it will rotate)
     this->dispDriver->user_data = this;
     this->dispDriver->flush_cb = [](auto drv, auto area, auto fbPtr) {
         auto gui = reinterpret_cast<Gui *>(drv->user_data);
-        const auto fbIdx = gui->fb->indexForFb(fbPtr);
+        const auto &size = gui->fb->getSize();
+        auto dispFb = gui->fb->getData(gui->outFbIndex);
+
+        BlitFb(gui->dispRotation, size, fbPtr, dispFb.data());
 
         // notify lvgl we're done
         lv_disp_flush_ready(drv);
-
-        // request flipping of buffer
-        gui->fb->requestFbFlip(fbIdx);
     };
-
-    // handle screen rotation
-    // TODO: implement
 
     // set up the buffer handling
     this->dispDriver->direct_mode = true;
-    this->dispDriver->full_refresh = true;
 
     this->dispBuffer = new lv_disp_draw_buf_t;
-    lv_disp_draw_buf_init(this->dispBuffer, this->fb->getData(0).data(),
-            this->fb->getData(1).data(), (size.first * size.second));
+    lv_disp_draw_buf_init(this->dispBuffer, this->drawFramebuffer.data(), nullptr, numPixels);
 
     this->dispDriver->draw_buf = this->dispBuffer;
 
@@ -127,6 +141,17 @@ void Gui::initDisplay() {
     if(!this->disp) {
         throw std::runtime_error("failed to create display");
     }
+
+    /**
+     * synchronize the GUI drawing to vblank
+     */
+    lv_timer_del(this->disp->refr_timer);
+    this->disp->refr_timer = nullptr;
+
+    this->fb->addSwapCallback([&](auto bufIdx) {
+        this->outFbIndex = bufIdx;
+        _lv_disp_refr_timer(nullptr);
+    });
 }
 
 /**
@@ -145,3 +170,38 @@ Gui::~Gui() {
 
     lv_freetype_destroy();
 }
+
+
+
+/**
+ * @brief Blit a framebuffer with optional rotation
+ *
+ * @TODO optimize using NEON
+ *
+ * @param angle Rotation angle (must be a multiple of 90°, up to 270°)
+ * @param size Pixel size (width, height) of the output buffer
+ * @param inFb Pointer to the start of the input (possibly rotated) framebuffer
+ * @param outFb Pointer to the display output buffer
+ */
+void Gui::BlitFb(const size_t angle, const std::pair<uint16_t, uint16_t> &size,
+        const void *inFb, void *outFb) {
+    auto inPtr = reinterpret_cast<const uint32_t *>(inFb);
+    auto outPtr = reinterpret_cast<uint32_t *>(outFb);
+
+    if(angle == 270) {
+        for(size_t y = 0; y < size.second; y++) {
+            for(size_t x = 0; x < size.first; x++) {
+                //outPtr[(y * size.first) + (size.first - x - 1)] = inPtr[(x * size.second) + (y)];
+                //outPtr[(y * size.first) + x] = inPtr[(x * size.second) + (y)];
+                outPtr[((size.second - 1 - y) * size.first) + x] = inPtr[(x * size.second) + (y)];
+            }
+        }
+    }
+    // no rotation (or unsupported rotation)
+    else {
+        memcpy(outPtr, inPtr,
+                static_cast<size_t>(size.first) * static_cast<size_t>(size.second) * 4);
+    }
+
+}
+

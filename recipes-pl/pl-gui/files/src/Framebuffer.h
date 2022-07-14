@@ -61,6 +61,13 @@ class Framebuffer {
         }
 
         /**
+         * @brief Get the memory of the backbuffer
+         */
+        inline auto getBackbufferData() {
+            return this->getData(this->backbuffer);
+        }
+
+        /**
          * @brief Get the pixel dimensions of a framebuffer
          *
          * @return A pair containing (width, height) of the framebuffer object
@@ -99,6 +106,13 @@ class Framebuffer {
 
         uint32_t addVBlankCallback(const SwapCallback &cb);
         void removeVBlankCallback(const uint32_t token);
+
+        /**
+         * @brief Flip to the backbuffer
+         */
+        inline void requestFbFlip() {
+            this->requestFbFlip(this->backbuffer);
+        }
 
         void requestFbFlip(const size_t newFbIndex);
 
@@ -166,6 +180,8 @@ class Framebuffer {
         std::array<uint32_t, 2> fbIds;
         /// Currently activated framebuffer (index)
         size_t currentFb{0};
+        /// Currently inactive (back buffer)
+        size_t backbuffer{0};
 
         /// File descriptor to the tty which is attached to the fbdev
         int ttyFd{-1};

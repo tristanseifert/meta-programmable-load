@@ -414,12 +414,15 @@ void Framebuffer::requestFbFlip(const size_t index) {
 void Framebuffer::PageFlipHandler(int fd, unsigned int seq, unsigned int tv_sec,
         unsigned int tv_usec, void *ctx) {
     auto fb = reinterpret_cast<Framebuffer *>(ctx);
-    const auto nextFb = fb->currentFb ? 0 : 1;
+    const auto nextFb = fb->currentFb ? 1 : 0;
+    fb->backbuffer = nextFb;
 
-    // invoke callbacks (TODO: validate buffer index is right)
+    // invoke callbacks
     for(const auto &[token, cb] : fb->swapCallbacks) {
         cb(nextFb);
     }
+
+    fb->requestFbFlip();
 }
 
 /**
@@ -430,10 +433,9 @@ void Framebuffer::PageFlipHandler(int fd, unsigned int seq, unsigned int tv_sec,
 void Framebuffer::VBlankHandler(int fd, unsigned int seq, unsigned int tv_sec,
         unsigned int tv_usec, void *ctx) {
     auto fb = reinterpret_cast<Framebuffer *>(ctx);
-    const auto nextFb = fb->currentFb ? 0 : 1;
 
     for(const auto &[token, cb] : fb->vblankCallbacks) {
-        cb(nextFb);
+        cb(fb->backbuffer);
     }
 }
 
