@@ -36,6 +36,7 @@ class HomeScreen {
     private:
         void initActualValueBox(const std::shared_ptr<shittygui::widgets::Container> &);
         void initConfigBox(const std::shared_ptr<shittygui::widgets::Container> &);
+        void initActionsBox(const std::shared_ptr<shittygui::widgets::Container> &);
 
         static std::shared_ptr<shittygui::widgets::Label> MakeMeasureLabel(
                 const std::shared_ptr<shittygui::Widget> &container, const shittygui::Color &color,
@@ -70,8 +71,13 @@ class HomeScreen {
         constexpr static const std::string_view kConfigFont{"Liberation Sans"};
         /// Font size for the configuration section
         constexpr static const double kConfigFontSize{20.};
-        /// Font color for sense input label
-        constexpr static const shittygui::Color kSenseInputColor{1, 1, 1};
+        /// Font color for system config labels
+        constexpr static const shittygui::Color kConfigTextColor{1, 1, 1};
+
+        /// Font for action buttons
+        constexpr static const std::string_view kActionFont{"Liberation Sans"};
+        /// Font size for action buttons
+        constexpr static const double kActionFontSize{18.};
 
     private:
         /// Root widget for the screen
@@ -82,6 +88,11 @@ class HomeScreen {
         std::shared_ptr<shittygui::widgets::Label> actualVoltageLabel;
         std::shared_ptr<shittygui::widgets::Label> actualWattageLabel;
         std::shared_ptr<shittygui::widgets::Label> actualTempLabel;
+
+        /// VSense status label
+        std::shared_ptr<shittygui::widgets::Label> vSenseLabel;
+        /// Current operating mode label
+        std::shared_ptr<shittygui::widgets::Label> modeLabel;
 };
 }
 

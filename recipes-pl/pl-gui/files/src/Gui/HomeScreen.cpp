@@ -4,6 +4,7 @@
 #include "HomeScreen.h"
 
 #include <shittygui/Screen.h>
+#include <shittygui/Widgets/Button.h>
 #include <shittygui/Widgets/Container.h>
 #include <shittygui/Widgets/Label.h>
 
@@ -28,6 +29,11 @@ HomeScreen::HomeScreen() {
     auto confCont = shittygui::MakeWidget<shittygui::widgets::Container>({10, 370}, {340, 100});
     this->initConfigBox(confCont);
     cont->addChild(confCont);
+
+    // action buttons
+    auto btnCont = shittygui::MakeWidget<shittygui::widgets::Container>({360, 370}, {420, 100});
+    this->initActionsBox(btnCont);
+    cont->addChild(btnCont);
 
     // finish set up
     this->root = cont;
@@ -80,15 +86,70 @@ void HomeScreen::initConfigBox(const std::shared_ptr<shittygui::widgets::Contain
     box->setBorderColor(kActualBorderColor);
 
     // Sense configuration
-    auto senseLabel = shittygui::MakeWidget<shittygui::widgets::Label>({5, 5},
-            shittygui::Size(width, kConfigFontSize * 1.25));
+    auto senseLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
+            shittygui::Point(5, 5 + ((kConfigFontSize * 1.35) + 5) * 1),
+            shittygui::Size(width, kConfigFontSize * 1.35));
     senseLabel->setFont(kConfigFont, kConfigFontSize);
-    senseLabel->setTextColor(kSenseInputColor);
+    senseLabel->setTextColor(kConfigTextColor);
     senseLabel->setTextAlign(shittygui::TextAlign::Center);
 
     senseLabel->setContent("VSense: Internal");
 
     box->addChild(senseLabel);
+    this->vSenseLabel = std::move(senseLabel);
+
+    // Current operating mode
+    auto modeLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
+            shittygui::Point(5, 5 + ((kConfigFontSize * 1.35) + 5) * 0),
+            shittygui::Size(width, kConfigFontSize * 1.35));
+    modeLabel->setFont(kConfigFont, kConfigFontSize);
+    modeLabel->setTextColor(kConfigTextColor);
+    modeLabel->setTextAlign(shittygui::TextAlign::Center);
+
+    modeLabel->setContent("Constant Current");
+
+    box->addChild(modeLabel);
+    this->modeLabel = std::move(modeLabel);
+}
+
+/**
+ * @brief Initialize the action button container box
+ *
+ * This is a box at the bottom right of the screen with various action buttons to act as shortcuts
+ * for commonly used menus.
+ */
+void HomeScreen::initActionsBox(const std::shared_ptr<shittygui::widgets::Container> &box) {
+    // set up the box
+    box->setBackgroundColor(kActualBackgroundColor);
+    box->setBorderColor(kActualBorderColor);
+
+    // trigger setup btn
+    auto modeCfg = shittygui::MakeWidget<shittygui::widgets::Button>({5, 5}, {90, 90},
+            shittygui::widgets::Button::Type::Push, "Mode");
+    modeCfg->setFont(kActionFont, kActionFontSize);
+
+    box->addChild(modeCfg);
+
+    // trigger configuration
+    auto trigSetup = shittygui::MakeWidget<shittygui::widgets::Button>({111, 5}, {90, 90},
+            shittygui::widgets::Button::Type::Push, "Trigger Setup");
+    trigSetup->setFont(kActionFont, kActionFontSize);
+
+    box->addChild(trigSetup);
+
+    // aux output
+    auto auxOutSetup = shittygui::MakeWidget<shittygui::widgets::Button>({217, 5}, {90, 90},
+            shittygui::widgets::Button::Type::Push, "Aux Out Config");
+    auxOutSetup->setFont(kActionFont, kActionFontSize);
+
+    box->addChild(auxOutSetup);
+
+    // I/O setup
+    auto ioSetup = shittygui::MakeWidget<shittygui::widgets::Button>({323, 5}, {90, 90},
+            shittygui::widgets::Button::Type::Push, "I/O Config");
+    ioSetup->setFont(kActionFont, kActionFontSize);
+
+    box->addChild(ioSetup);
 }
 
 /**
