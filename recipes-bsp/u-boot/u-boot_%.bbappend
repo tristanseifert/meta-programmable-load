@@ -3,14 +3,14 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 # custom version modifier
 UBOOT_LOCALVERSION = "-programmable-load"
 
-# use a newer u-boot (master)
-SRCREV = "0cc846dafcf6f6270c6587d6fe79011834d6e49a"
+# use a newer u-boot (v2022.07)
+SRCREV = "e092e3250270a1016c877da7bdd9384f14b1321e"
 LIC_FILES_CHKSUM = "file://Licenses/README;md5=2ca5f2c35c8cc335f0a19756634782f1"
 
 # extlinux config
 # TODO: can we make this not hard-code the version? symlink support w/ erofs is broken
-UBOOT_EXTLINUX_KERNEL_IMAGE = "/boot/zImage-5.15.54"
-UBOOT_EXTLINUX_KERNEL_IMAGE_default = "/boot/zImage-5.15.54"
+UBOOT_EXTLINUX_KERNEL_IMAGE = "/boot/zImage-5.15.55"
+UBOOT_EXTLINUX_KERNEL_IMAGE_default = "/boot/zImage-5.15.55"
 
 # patch to disable ADC in u-boot
 SRC_URI:append:stm32mp1 = " \
