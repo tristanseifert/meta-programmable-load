@@ -87,6 +87,7 @@ add_executable(gui
     src/Framebuffer.cpp
     src/Watchdog.cpp
     src/Gui/Renderer.cpp
+    src/Gui/HomeScreen.cpp
 )
 
 set_target_properties(gui PROPERTIES OUTPUT_NAME load-gui)

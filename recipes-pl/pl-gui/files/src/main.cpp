@@ -18,6 +18,7 @@
 #include "Watchdog.h"
 #include "version.h"
 #include "Gui/Renderer.h"
+#include "Gui/HomeScreen.h"
 
 /// Whether the UI task shall continue running
 std::atomic_bool gRun{true};
@@ -91,6 +92,7 @@ int main(const int argc, char * const * argv) {
     std::shared_ptr<EventLoop> ev;
     std::shared_ptr<Framebuffer> fb;
     std::shared_ptr<Gui::Renderer> gui;
+    std::shared_ptr<Gui::HomeScreen> home;
 
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
@@ -177,6 +179,9 @@ int main(const int argc, char * const * argv) {
 
     try {
         gui = std::make_shared<Gui::Renderer>(ev, fb);
+
+        home = std::make_shared<Gui::HomeScreen>();
+        gui->setRootWidget(home->getWidget());
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up gui: " << e.what();
         return 1;
