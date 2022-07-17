@@ -1,5 +1,5 @@
-#ifndef GUI_H
-#define GUI_H
+#ifndef GUI_RENDERER_H
+#define GUI_RENDERER_H
 
 #include <cstddef>
 #include <cstdint>
@@ -10,23 +10,25 @@
 class EventLoop;
 class Framebuffer;
 
+namespace shittygui {
+class Screen;
+}
+
+namespace Gui {
+class FontHandler;
+
 /**
  * @brief LVGL GUI handler
  *
  * This implements a basic display driver (using the Framebuffer class) and event/timer handling
  * via event sources on our main loop.
  */
-class Gui {
+class Renderer {
     public:
-        Gui(const std::shared_ptr<EventLoop> &ev, const std::shared_ptr<Framebuffer> &fb);
-        ~Gui();
+        Renderer(const std::shared_ptr<EventLoop> &ev, const std::shared_ptr<Framebuffer> &fb);
+        ~Renderer();
 
     private:
-        void initEvents();
-        void initDisplayRotated(const size_t angle);
-
-        static void BlitFb(const size_t angle, const std::pair<uint16_t, uint16_t> &size,
-                const void *inFb, void *outFb);
 
     private:
         /// Tick interval, in microseconds
@@ -62,6 +64,10 @@ class Gui {
         struct _lv_disp_draw_buf_t *dispBuffer{nullptr};
         /// Display instance
         struct _lv_disp_t *disp{nullptr};
+
+        /// The shittygui screen
+        std::shared_ptr<shittygui::Screen> screen;
 };
+}
 
 #endif

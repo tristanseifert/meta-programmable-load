@@ -2,7 +2,8 @@ SUMMARY = "Programmable load user interface"
 LICENSE = "ISC"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/ISC;md5=f3b90e78ea0cffb20bf5cca7947a896d"
 PR = "r0"
-DEPENDS = "pl-app-meta pl-loadd pl-confd libcbor systemd libevent libdrm libpng freetype fontconfig"
+DEPENDS = "pl-app-meta pl-loadd pl-confd libcbor systemd libevent libdrm libpng freetype fontconfig\
+    cairo harfbuzz pango"
 RDEPENDS:${PN} = "libsystemd libdrm-kms"
 
 # package is built using CMake

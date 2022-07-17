@@ -15,9 +15,9 @@
 
 #include "EventLoop.h"
 #include "Framebuffer.h"
-#include "Gui.h"
 #include "Watchdog.h"
 #include "version.h"
+#include "Gui/Renderer.h"
 
 /// Whether the UI task shall continue running
 std::atomic_bool gRun{true};
@@ -90,7 +90,7 @@ static void InitLibevent() {
 int main(const int argc, char * const * argv) {
     std::shared_ptr<EventLoop> ev;
     std::shared_ptr<Framebuffer> fb;
-    std::shared_ptr<Gui> gui;
+    std::shared_ptr<Gui::Renderer> gui;
 
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
@@ -176,7 +176,7 @@ int main(const int argc, char * const * argv) {
     PLOG_DEBUG << "initializing gui";
 
     try {
-        gui = std::make_shared<Gui>(ev, fb);
+        gui = std::make_shared<Gui::Renderer>(ev, fb);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up gui: " << e.what();
         return 1;
