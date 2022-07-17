@@ -119,3 +119,63 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(gui PRIVATE ${PKG_SYSTEMD_LIBRARIES})
 endif()
 
+###############
+# LVGL C++ wrapper
+add_library(lvglpp STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/core/display.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/core/event.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/core/indev.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/core/object.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/core/group.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/core/theme.cpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/draw/desc.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/draw/image.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/draw/mask.cpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/font/font.cpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/misc/anim.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/misc/area.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/misc/color.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/misc/fs.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/misc/style.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/misc/timer.cpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/animimg.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/arc.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/bar.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/btnmatrix.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/calendar.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/canvas.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/chart.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/checkbox.cpp
+    # does not currently compile
+    #    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/colorwheel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/dropdown.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/image.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/imgbtn.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/keyboard.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/label.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/led.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/line.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/list.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/menu.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/meter.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/msgbox.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/roller.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/slider.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/span.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/spinbox.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/spinner.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/table.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/tabview.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/textarea.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/tileview.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src/lvglpp/widgets/win.cpp
+)
+target_compile_options(lvglpp PUBLIC "-Wno-unused-function")
+target_include_directories(lvglpp PUBLIC ${CMAKE_CURRENT_LIST_DIR}/lib/lvglpp/src)
+target_link_libraries(lvglpp PUBLIC lvgl::lvgl)
+
+target_link_libraries(gui PRIVATE lvglpp)
