@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <memory>
 
 /**
  * @brief Main event loop
@@ -15,10 +16,20 @@
  *
  * Other components of the GUI task may add their event sources to the loop as needed.
  */
-class EventLoop {
+class EventLoop: public std::enable_shared_from_this<EventLoop> {
     public:
         EventLoop();
         ~EventLoop();
+
+        /**
+         * @brief Arm the event loop for execution
+         *
+         * This doesn't really do anything other than set it as the active event loop for the
+         * calling thread.
+         */
+        void arm() {
+            this->activate();
+        }
 
         void run();
 
@@ -29,13 +40,24 @@ class EventLoop {
             return this->evbase;
         }
 
+        static std::shared_ptr<EventLoop> Current();
+
     private:
         void initWatchdogEvent();
         void initSignalEvents();
 
         void handleTermination();
 
+        /**
+         * @brief Mark this event loop as the calling thread's active loop
+         */
+        inline void activate() {
+            gCurrentEventLoop = this->shared_from_this();
+        }
+
     private:
+        static thread_local std::weak_ptr<EventLoop> gCurrentEventLoop;
+
         /// signals to intercept
         constexpr static const std::array<int, 3> kEvents{{SIGINT, SIGTERM, SIGHUP}};
         /// termination signal events

@@ -11,6 +11,15 @@
 extern std::atomic_bool gRun;
 
 /**
+ * @brief Current event loop
+ *
+ * This is a thread-local that is set to the `this` value when we start executing a run loop.
+ */
+thread_local std::weak_ptr<EventLoop> EventLoop::gCurrentEventLoop;
+
+
+
+/**
  * @brief Initialize the event loop
  */
 EventLoop::EventLoop() {
@@ -44,6 +53,16 @@ EventLoop::~EventLoop() {
     if(this->watchdogEvent) {
         event_free(this->watchdogEvent);
     }
+}
+
+/**
+ * @brief Get the current thread's event loop
+ *
+ * Return the event loop that most recently executed on this thread. If no event loop exists, it
+ * will return `nullptr`.
+ */
+std::shared_ptr<EventLoop> EventLoop::Current() {
+    return gCurrentEventLoop.lock();
 }
 
 /**
@@ -109,6 +128,8 @@ void EventLoop::initSignalEvents() {
  *         of a timer callback that runs periodically.
  */
 void EventLoop::run() {
+    this->activate();
+
     event_base_dispatch(this->evbase);
 }
 

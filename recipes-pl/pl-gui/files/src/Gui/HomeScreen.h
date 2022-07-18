@@ -10,6 +10,7 @@ class Widget;
 
 namespace widgets {
 class Container;
+class ImageView;
 class Label;
 }
 }
@@ -24,7 +25,7 @@ namespace Gui {
 class HomeScreen {
     public:
         HomeScreen();
-        ~HomeScreen() = default;
+        ~HomeScreen();
 
         /**
          * @brief Get the root widget for the home screen
@@ -34,14 +35,18 @@ class HomeScreen {
         };
 
     private:
+        void initClockTimer();
         void initActualValueBox(const std::shared_ptr<shittygui::widgets::Container> &);
         void initConfigBox(const std::shared_ptr<shittygui::widgets::Container> &);
         void initActionsBox(const std::shared_ptr<shittygui::widgets::Container> &);
+        void initClockBox(const std::shared_ptr<shittygui::widgets::Container> &);
 
         static std::shared_ptr<shittygui::widgets::Label> MakeMeasureLabel(
                 const std::shared_ptr<shittygui::Widget> &container, const shittygui::Color &color,
                 const shittygui::Point origin, const std::string_view &unit,
                 const size_t unitWidth = 74);
+
+        void updateClock();
 
     private:
         /// Color for the actual current/voltage region border
@@ -79,6 +84,11 @@ class HomeScreen {
         /// Font size for action buttons
         constexpr static const double kActionFontSize{18.};
 
+        constexpr static const std::string_view kClockFont{"Liberation Sans Narrow"};
+        //constexpr static const std::string_view kClockFont{"Dinish Condensed"};
+        constexpr static const double kClockFontSize{19.};
+        constexpr static const shittygui::Color kClockTextColor{0.94, 0.94, 0.94};
+
     private:
         /// Root widget for the screen
         std::shared_ptr<shittygui::Widget> root;
@@ -93,6 +103,18 @@ class HomeScreen {
         std::shared_ptr<shittygui::widgets::Label> vSenseLabel;
         /// Current operating mode label
         std::shared_ptr<shittygui::widgets::Label> modeLabel;
+
+        /// Icon for the network connectivity status
+        std::shared_ptr<shittygui::widgets::ImageView> statusNet;
+        /// Status icon for temperature of instrument
+        std::shared_ptr<shittygui::widgets::ImageView> statusTemp;
+        /// status icon indicating a remote control connection is present
+        std::shared_ptr<shittygui::widgets::ImageView> statusRemote;
+
+        /// clock timer event
+        struct event *clockTimerEvent{nullptr};
+        /// Clock timer label
+        std::shared_ptr<shittygui::widgets::Label> clockLabel;
 };
 }
 

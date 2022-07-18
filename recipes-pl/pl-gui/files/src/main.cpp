@@ -171,6 +171,7 @@ int main(const int argc, char * const * argv) {
     Watchdog::Init();
 
     ev = std::make_shared<EventLoop>();
+    ev->arm();
 
     // set up RPC to loadd
     // TODO: implement this

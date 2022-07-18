@@ -1,11 +1,20 @@
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+
+#include <event2/event.h>
+
 #include <fmt/format.h>
 #include <plog/Log.h>
 
+#include "EventLoop.h"
 #include "HomeScreen.h"
+#include "IconManager.h"
 
 #include <shittygui/Screen.h>
 #include <shittygui/Widgets/Button.h>
 #include <shittygui/Widgets/Container.h>
+#include <shittygui/Widgets/ImageView.h>
 #include <shittygui/Widgets/Label.h>
 
 using namespace Gui;
@@ -20,23 +29,50 @@ HomeScreen::HomeScreen() {
     cont->setBorderRadius(0.);
     cont->setBackgroundColor({0, 0, 0});
 
-    // actual value section
+    // actual value section (top left)
     auto actualCont = shittygui::MakeWidget<shittygui::widgets::Container>({10, 10}, {340, 350});
     this->initActualValueBox(actualCont);
     cont->addChild(actualCont);
 
-    // system configuration
+    // system configuration (under actual values)
     auto confCont = shittygui::MakeWidget<shittygui::widgets::Container>({10, 370}, {340, 100});
     this->initConfigBox(confCont);
     cont->addChild(confCont);
 
-    // action buttons
-    auto btnCont = shittygui::MakeWidget<shittygui::widgets::Container>({360, 370}, {420, 100});
+    // action buttons (along right side)
+    auto btnCont = shittygui::MakeWidget<shittygui::widgets::Container>({690, 10}, {100, 350});
     this->initActionsBox(btnCont);
     cont->addChild(btnCont);
 
+    // current date/time (bottom right)
+    auto clockCont = shittygui::MakeWidget<shittygui::widgets::Container>({690, 370}, {100, 100});
+    this->initClockBox(clockCont);
+    cont->addChild(clockCont);
+
     // finish set up
     this->root = cont;
+
+    this->initClockTimer();
+}
+
+/**
+ * @brief Initialize an event to drive the clock
+ */
+void HomeScreen::initClockTimer() {
+    auto evbase = EventLoop::Current()->getEvBase();
+    this->clockTimerEvent = event_new(evbase, -1, EV_PERSIST, [](auto, auto, auto ctx) {
+        reinterpret_cast<HomeScreen *>(ctx)->updateClock();
+    }, this);
+    if(!this->clockTimerEvent) {
+        throw std::runtime_error("failed to allocate clock event");
+    }
+
+    struct timeval tv{
+        .tv_sec  = static_cast<time_t>(1),
+        .tv_usec = static_cast<suseconds_t>(0),
+    };
+
+    evtimer_add(this->clockTimerEvent, &tv);
 }
 
 /**
@@ -131,25 +167,72 @@ void HomeScreen::initActionsBox(const std::shared_ptr<shittygui::widgets::Contai
     box->addChild(modeCfg);
 
     // trigger configuration
-    auto trigSetup = shittygui::MakeWidget<shittygui::widgets::Button>({111, 5}, {90, 90},
+    auto trigSetup = shittygui::MakeWidget<shittygui::widgets::Button>({5, 105}, {90, 90},
             shittygui::widgets::Button::Type::Push, "Trigger Setup");
     trigSetup->setFont(kActionFont, kActionFontSize);
 
     box->addChild(trigSetup);
 
     // aux output
-    auto auxOutSetup = shittygui::MakeWidget<shittygui::widgets::Button>({217, 5}, {90, 90},
+    auto auxOutSetup = shittygui::MakeWidget<shittygui::widgets::Button>({5, 205}, {90, 90},
             shittygui::widgets::Button::Type::Push, "Aux Out Config");
     auxOutSetup->setFont(kActionFont, kActionFontSize);
 
     box->addChild(auxOutSetup);
 
-    // I/O setup
-    auto ioSetup = shittygui::MakeWidget<shittygui::widgets::Button>({323, 5}, {90, 90},
-            shittygui::widgets::Button::Type::Push, "I/O Config");
-    ioSetup->setFont(kActionFont, kActionFontSize);
+    // network icon
+    this->statusNet = shittygui::MakeWidget<shittygui::widgets::ImageView>({2, 307}, {32, 32});
+    this->statusNet->setBorderWidth(0.);
+    this->statusNet->setBackgroundColor({0, 0, 0, 0});
+    this->statusNet->setImage(IconManager::LoadIcon(IconManager::Icon::NetworkUp,
+                IconManager::Size::Square32));
 
-    box->addChild(ioSetup);
+    box->addChild(this->statusNet);
+
+    // temperature icon
+    this->statusTemp = shittygui::MakeWidget<shittygui::widgets::ImageView>({34, 307}, {32, 32});
+    this->statusTemp->setBorderWidth(0.);
+    this->statusTemp->setBackgroundColor({0, 0, 0, 0});
+    this->statusTemp->setImage(IconManager::LoadIcon(IconManager::Icon::TemperatureLowest,
+                IconManager::Size::Square32));
+
+    box->addChild(this->statusTemp);
+
+    // remote control icon
+    this->statusRemote = shittygui::MakeWidget<shittygui::widgets::ImageView>({66, 307}, {32, 32});
+    this->statusRemote->setBorderWidth(0.);
+    this->statusRemote->setBackgroundColor({0, 0, 0, 0});
+    this->statusRemote->setImage(IconManager::LoadIcon(IconManager::Icon::Disconnected,
+                IconManager::Size::Square32));
+
+    box->addChild(this->statusRemote);
+}
+
+/**
+ * @brief Initialize the clock box
+ *
+ * This is a label that shows the current date and time.
+ */
+void HomeScreen::initClockBox(const std::shared_ptr<shittygui::widgets::Container> &box) {
+    const auto width = box->getBounds().size.width - 2,
+          height = box->getBounds().size.height - 2;
+
+    // set up the box
+    box->setBackgroundColor(kActualBackgroundColor);
+    box->setBorderColor(kActualBorderColor);
+
+    // create the label
+    auto clockLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
+            shittygui::Point(1, 2), shittygui::Size(width, height));
+    clockLabel->setFont(kClockFont, kClockFontSize);
+    clockLabel->setTextColor(kClockTextColor);
+    clockLabel->setTextAlign(shittygui::TextAlign::Center,
+            shittygui::VerticalAlign::Middle);
+
+    box->addChild(clockLabel);
+
+    this->clockLabel = std::move(clockLabel);
+    this->updateClock();
 }
 
 /**
@@ -205,3 +288,35 @@ std::shared_ptr<shittygui::widgets::Label> HomeScreen::MakeMeasureLabel(
     return value;
 }
 
+/**
+ * @brief Clean up home screen resources
+ *
+ * Remove the clock timer.1G
+ */
+HomeScreen::~HomeScreen() {
+    if(this->clockTimerEvent) {
+        event_free(this->clockTimerEvent);
+    }
+}
+
+
+
+/**
+ * @brief Update the clock
+ */
+void HomeScreen::updateClock() {
+    // get current time
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+
+    // format time and date string and set it
+    std::stringstream str;
+
+    if((tm.tm_sec % 2)) {
+        str << std::put_time(&tm, "%H %M %S\n%b %d");
+    } else {
+        str << std::put_time(&tm, "%H:%M:%S\n%b %d");
+    }
+
+    this->clockLabel->setContent(str.str());
+}

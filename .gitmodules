@@ -28,12 +28,6 @@
 [submodule "recipes-pl/pl-gui/files/libs/fmt"]
 	path = recipes-pl/pl-gui/files/lib/fmt
 	url = https://github.com/fmtlib/fmt.git
-[submodule "recipes-pl/pl-gui/files/lib/lvgl"]
-	path = recipes-pl/pl-gui/files/lib/lvgl
-	url = https://github.com/lvgl/lvgl.git
-[submodule "recipes-pl/pl-gui/files/lib/lvglpp"]
-	path = recipes-pl/pl-gui/files/lib/lvglpp
-	url = https://github.com/vpaeder/lvglpp.git
 [submodule "recipes-pl/pl-gui/files/lib/shittygui"]
 	path = recipes-pl/pl-gui/files/lib/shittygui
 	url = git@github.com:tristanseifert/shittygui.cpp.git
