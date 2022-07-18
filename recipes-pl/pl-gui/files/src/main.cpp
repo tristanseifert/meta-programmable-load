@@ -94,7 +94,6 @@ int main(const int argc, char * const * argv) {
     std::shared_ptr<EventLoop> ev;
     std::shared_ptr<Framebuffer> fb;
     std::shared_ptr<Gui::Renderer> gui;
-    std::shared_ptr<Gui::HomeScreen> home;
 
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
@@ -193,8 +192,8 @@ int main(const int argc, char * const * argv) {
         gui = std::make_shared<Gui::Renderer>(ev, fb);
         Gui::IconManager::SetBasePath(iconBasePath);
 
-        home = std::make_shared<Gui::HomeScreen>();
-        gui->setRootWidget(home->getWidget());
+        auto home = std::make_shared<Gui::HomeScreen>();
+        gui->setRootViewController(home);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up gui: " << e.what();
         return 1;

@@ -12,7 +12,7 @@ class Framebuffer;
 
 namespace shittygui {
 class Screen;
-class Widget;
+class ViewController;
 }
 
 namespace Gui {
@@ -29,7 +29,7 @@ class Renderer {
         Renderer(const std::shared_ptr<EventLoop> &ev, const std::shared_ptr<Framebuffer> &fb);
         ~Renderer();
 
-        void setRootWidget(const std::shared_ptr<shittygui::Widget> &newRoot);
+        void setRootViewController(const std::shared_ptr<shittygui::ViewController> &newRoot);
 
     private:
 

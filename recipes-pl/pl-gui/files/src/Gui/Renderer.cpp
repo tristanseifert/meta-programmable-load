@@ -54,8 +54,8 @@ Renderer::~Renderer() {
 }
 
 /**
- * @brief Set the root widget displayed on the screen
+ * @brief Set the root view controller displayed on the screen
  */
-void Renderer::setRootWidget(const std::shared_ptr<shittygui::Widget> &newRoot) {
-    this->screen->setRootWidget(newRoot);
+void Renderer::setRootViewController(const std::shared_ptr<shittygui::ViewController> &newRoot) {
+    this->screen->setRootViewController(newRoot);
 }

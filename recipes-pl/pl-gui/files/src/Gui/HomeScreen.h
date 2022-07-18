@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include <shittygui/Types.h>
+#include <shittygui/ViewController.h>
 
 namespace shittygui {
 class Widget;
@@ -22,7 +23,7 @@ namespace Gui {
  * This is the main screen for the load. It shows the setpoint value (and allows its adjustment)
  * as well as the current measured voltage, current, and calculated wattage.
  */
-class HomeScreen {
+class HomeScreen: public shittygui::ViewController {
     public:
         HomeScreen();
         ~HomeScreen();
@@ -30,9 +31,16 @@ class HomeScreen {
         /**
          * @brief Get the root widget for the home screen
          */
-        constexpr inline std::shared_ptr<shittygui::Widget> &getWidget() {
+        constexpr inline std::shared_ptr<shittygui::Widget> &getWidget() override {
             return this->root;
-        };
+        }
+
+        /**
+         * @brief Return the view title
+         */
+        std::string_view getTitle() override {
+            return "Home";
+        }
 
     private:
         void initClockTimer();
