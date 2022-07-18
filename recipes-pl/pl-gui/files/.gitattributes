@@ -1,0 +1,5 @@
+data/**.png filter=lfs diff=lfs merge=lfs -text
+data/icons filter=lfs diff=lfs merge=lfs -text
+data/icons/* filter=lfs diff=lfs merge=lfs -text
+data/icons/32x32/*.png filter=lfs diff=lfs merge=lfs -text
+data/icons/16x16/*.png filter=lfs diff=lfs merge=lfs -text

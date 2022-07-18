@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <iostream>
 
@@ -17,6 +18,7 @@
 #include "Framebuffer.h"
 #include "Watchdog.h"
 #include "version.h"
+#include "Gui/IconManager.h"
 #include "Gui/Renderer.h"
 #include "Gui/HomeScreen.h"
 
@@ -97,6 +99,9 @@ int main(const int argc, char * const * argv) {
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
 
+    // base path for icons
+    std::filesystem::path iconBasePath{"/usr/share/pl-gui/icons"};
+
     // parse command line
     int c;
     while(1) {
@@ -106,6 +111,8 @@ int main(const int argc, char * const * argv) {
             {"log-level",               optional_argument, 0, 0},
             // log style (simple = no timestamps, for systemd/syslog use)
             {"log-simple",              no_argument, 0, 0},
+            // base path for icons
+            {"iconbase",                required_argument, 0, 0},
             {nullptr,                   0, 0, 0},
         };
 
@@ -150,6 +157,10 @@ int main(const int argc, char * const * argv) {
             else if(index == 1) {
                 logSimple = true;
             }
+            // icon base path
+            else if(index == 2) {
+                iconBasePath = optarg;
+            }
         }
     }
 
@@ -179,6 +190,7 @@ int main(const int argc, char * const * argv) {
 
     try {
         gui = std::make_shared<Gui::Renderer>(ev, fb);
+        Gui::IconManager::SetBasePath(iconBasePath);
 
         home = std::make_shared<Gui::HomeScreen>();
         gui->setRootWidget(home->getWidget());

@@ -86,6 +86,7 @@ add_executable(gui
     src/EventLoop.cpp
     src/Framebuffer.cpp
     src/Watchdog.cpp
+    src/Gui/IconManager.cpp
     src/Gui/Renderer.cpp
     src/Gui/HomeScreen.cpp
 )
@@ -107,6 +108,9 @@ target_link_options(gui PRIVATE ${PKG_FREETYPE_LDFLAGS})
 
 
 INSTALL(TARGETS gui RUNTIME DESTINATION /usr/sbin)
+
+# copy icons
+file(COPY ${CMAKE_CURRENT_LIST_DIR}/data/icons/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/icons)
 
 # add systemd support on linux
 if(UNIX AND NOT APPLE)

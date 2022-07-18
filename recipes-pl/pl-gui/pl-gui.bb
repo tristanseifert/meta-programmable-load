@@ -8,6 +8,7 @@ RDEPENDS:${PN} = "libsystemd libdrm-kms"
 
 # package is built using CMake
 SRC_URI = "\
+    file://data/ \
     file://lib/ \
     file://src/ \
     file://include/ \
