@@ -85,6 +85,7 @@ add_executable(gui
     src/main.cpp
     src/EventLoop.cpp
     src/Framebuffer.cpp
+    src/LoaddClient.cpp
     src/Watchdog.cpp
     src/Gui/IconManager.cpp
     src/Gui/Renderer.cpp

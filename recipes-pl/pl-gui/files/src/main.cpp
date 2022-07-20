@@ -16,6 +16,7 @@
 
 #include "EventLoop.h"
 #include "Framebuffer.h"
+#include "LoaddClient.h"
 #include "Watchdog.h"
 #include "version.h"
 #include "Gui/IconManager.h"
@@ -92,6 +93,7 @@ static void InitLibevent() {
  */
 int main(const int argc, char * const * argv) {
     std::shared_ptr<EventLoop> ev;
+    std::shared_ptr<LoaddClient> rpc;
     std::shared_ptr<Framebuffer> fb;
     std::shared_ptr<Gui::Renderer> gui;
 
@@ -100,6 +102,8 @@ int main(const int argc, char * const * argv) {
 
     // base path for icons
     std::filesystem::path iconBasePath{"/usr/share/pl-gui/icons"};
+    // path to the loadd socket
+    std::filesystem::path loaddSocketPath;
 
     // parse command line
     int c;
@@ -112,6 +116,8 @@ int main(const int argc, char * const * argv) {
             {"log-simple",              no_argument, 0, 0},
             // base path for icons
             {"iconbase",                required_argument, 0, 0},
+            /// path to the loadd socket
+            {"loadd-socket",            required_argument, 0, 0},
             {nullptr,                   0, 0, 0},
         };
 
@@ -160,6 +166,10 @@ int main(const int argc, char * const * argv) {
             else if(index == 2) {
                 iconBasePath = optarg;
             }
+            // loadd socket path
+            else if(index == 3) {
+                loaddSocketPath = optarg;
+            }
         }
     }
 
@@ -173,7 +183,14 @@ int main(const int argc, char * const * argv) {
     ev->arm();
 
     // set up RPC to loadd
-    // TODO: implement this
+    PLOG_DEBUG << "initializing loadd rpc";
+
+    try {
+        rpc = std::make_shared<LoaddClient>(ev, loaddSocketPath);
+    } catch(const std::exception &e) {
+        PLOG_FATAL << "failed to set up loadd rpc: " << e.what();
+        return 1;
+    }
 
     // set up drm (framebuffer)
     PLOG_DEBUG << "initializing drm";
@@ -192,7 +209,7 @@ int main(const int argc, char * const * argv) {
         gui = std::make_shared<Gui::Renderer>(ev, fb);
         Gui::IconManager::SetBasePath(iconBasePath);
 
-        auto home = std::make_shared<Gui::HomeScreen>();
+        auto home = std::make_shared<Gui::HomeScreen>(rpc);
         gui->setRootViewController(home);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up gui: " << e.what();
@@ -218,5 +235,6 @@ int main(const int argc, char * const * argv) {
     fb.reset();
 
     // clean up everything else
+    rpc.reset();
     ev.reset();
 }

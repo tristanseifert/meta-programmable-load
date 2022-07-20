@@ -1,6 +1,7 @@
 #ifndef GUI_HOMESCREEN_H
 #define GUI_HOMESCREEN_H
 
+#include <memory>
 #include <string_view>
 
 #include <shittygui/Types.h>
@@ -16,6 +17,8 @@ class Label;
 }
 }
 
+class LoaddClient;
+
 namespace Gui {
 /**
  * @brief Programmable load home screen
@@ -25,7 +28,7 @@ namespace Gui {
  */
 class HomeScreen: public shittygui::ViewController {
     public:
-        HomeScreen();
+        HomeScreen(const std::shared_ptr<LoaddClient> &rpc);
         ~HomeScreen();
 
         /**
@@ -42,6 +45,22 @@ class HomeScreen: public shittygui::ViewController {
             return "Home";
         }
 
+        /**
+         * @brief Ensure there's a measurement callback when we appear
+         */
+        void viewWillAppear(const bool isAnimated) override {
+            ViewController::viewWillAppear(isAnimated);
+            this->installMeasurementCallback();
+        }
+
+        /**
+         * @brief Uninstall measurement callback when disappearing
+         */
+        void viewDidDisappear() override {
+            ViewController::viewDidDisappear();
+            this->removeMeasurementCallback();
+        }
+
     private:
         void initClockTimer();
         void initActualValueBox(const std::shared_ptr<shittygui::widgets::Container> &);
@@ -55,6 +74,9 @@ class HomeScreen: public shittygui::ViewController {
                 const size_t unitWidth = 74);
 
         void updateClock();
+
+        void installMeasurementCallback();
+        void removeMeasurementCallback();
 
     private:
         /// Color for the actual current/voltage region border
@@ -97,6 +119,11 @@ class HomeScreen: public shittygui::ViewController {
         constexpr static const shittygui::Color kClockTextColor{0.94, 0.94, 0.94};
 
     private:
+        /// Reference to the loadd RPC
+        std::weak_ptr<LoaddClient> loaddRpc;
+        /// Measurement update callback token
+        uint32_t measurementCallbackToken{0};
+
         /// Root widget for the screen
         std::shared_ptr<shittygui::Widget> root;
 

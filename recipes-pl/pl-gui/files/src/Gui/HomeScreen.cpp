@@ -10,6 +10,7 @@
 #include "EventLoop.h"
 #include "HomeScreen.h"
 #include "IconManager.h"
+#include "LoaddClient.h"
 
 #include <shittygui/Screen.h>
 #include <shittygui/Widgets/Button.h>
@@ -22,7 +23,7 @@ using namespace Gui;
 /**
  * @brief Initialize the home screen
  */
-HomeScreen::HomeScreen() {
+HomeScreen::HomeScreen(const std::shared_ptr<LoaddClient> &loaddRpc) : loaddRpc(loaddRpc) {
     // create the container
     auto cont = shittygui::MakeWidget<shittygui::widgets::Container>({0, 0}, {800, 480});
     cont->setDrawsBorder(false);
@@ -91,21 +92,25 @@ void HomeScreen::initActualValueBox(const std::shared_ptr<shittygui::widgets::Co
     // current
     this->actualCurrentLabel = MakeMeasureLabel(box, kActualCurrentColor,
             shittygui::Point(5, (kYSpacing * 0)), "A", kUnitWidth);
+    this->actualCurrentLabel->setBackgroundColor({0, 0, 0, 1});
     this->actualCurrentLabel->setContent("<span font_features='tnum'>0.000</span>", true);
 
     // voltage
     this->actualVoltageLabel = MakeMeasureLabel(box, kActualVoltageColor,
             shittygui::Point(5, (kYSpacing * 1)), "V", kUnitWidth);
-    this->actualVoltageLabel->setContent("<span font_features='tnum'>1.23</span>", true);
+    this->actualVoltageLabel->setBackgroundColor({0, 0, 0, 1});
+    this->actualVoltageLabel->setContent("<span font_features='tnum'>0.00</span>", true);
 
     // voltage
     this->actualWattageLabel = MakeMeasureLabel(box, kActualWattageColor,
             shittygui::Point(5, (kYSpacing * 2)), "W", kUnitWidth);
-    this->actualWattageLabel->setContent("<span font_features='tnum'>7.89</span>", true);
+    this->actualWattageLabel->setBackgroundColor({0, 0, 0, 1});
+    this->actualWattageLabel->setContent("<span font_features='tnum'>0.00</span>", true);
 
     // inside temperature
     this->actualTempLabel = MakeMeasureLabel(box, kActualTempColor, {5, 260}, "°C", kUnitWidth);
-    this->actualTempLabel->setContent("<span font_features='tnum'>4.5</span>", true);
+    this->actualTempLabel->setBackgroundColor({0, 0, 0, 1});
+    this->actualTempLabel->setContent("<span font_features='tnum'>0.0</span>", true);
 }
 
 /**
@@ -297,6 +302,8 @@ HomeScreen::~HomeScreen() {
     if(this->clockTimerEvent) {
         event_free(this->clockTimerEvent);
     }
+
+    this->removeMeasurementCallback();
 }
 
 
@@ -318,4 +325,49 @@ void HomeScreen::updateClock() {
     }
 
     this->clockLabel->setContent(str.str(), true);
+}
+
+
+
+/**
+ * @brief Install the measurement callback
+ *
+ * This updates our measurement labels and the thermal state icons.
+ */
+void HomeScreen::installMeasurementCallback() {
+    auto rpc = this->loaddRpc.lock();
+    if(!rpc) {
+        PLOG_WARNING << "LoaddClient is nullptr!";
+        return;
+    }
+
+    if(this->measurementCallbackToken) {
+        this->removeMeasurementCallback();
+    }
+
+    this->measurementCallbackToken = rpc->addMeasurementCallback([&](const auto &data) {
+        this->actualCurrentLabel->setContent(fmt::format("<span font_features='tnum'>{:.3f}</span>", data.current), true);
+        this->actualVoltageLabel->setContent(fmt::format("<span font_features='tnum'>{:.2f}</span>", data.voltage), true);
+        this->actualTempLabel->setContent(fmt::format("<span font_features='tnum'>{:.1f}</span>", data.temperature), true);
+    });
+}
+
+/**
+ * @brief Remove an existing measurement callback
+ */
+void HomeScreen::removeMeasurementCallback() {
+    auto rpc = this->loaddRpc.lock();
+    if(!rpc) {
+        // this implies the clalback was removed as well
+        PLOG_WARNING << "LoaddClient is nullptr!";
+        this->measurementCallbackToken = 0;
+        return;
+    }
+
+    if(!this->measurementCallbackToken) {
+        return;
+    }
+
+    rpc->removeMeasurementCallback(this->measurementCallbackToken);
+    this->measurementCallbackToken = 0;
 }
