@@ -12,6 +12,18 @@
 #define kRpcVersionLatest 0x0100
 
 /**
+ * @brief RPC header flags
+ *
+ * This enum defines allowable values for the `rpc_header.flags` member.
+ *
+ * @seealso struct rpc_header
+ */
+enum rpc_flags {
+    kRpcFlagReply                       = (1 << 0),
+    kRpcFlagBroadcast                   = (1 << 1),
+};
+
+/**
  * @brief RPC message header
  *
  * This is sent in the native byte order -- we only use local domain sockets -- and contains an

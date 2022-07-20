@@ -367,6 +367,29 @@ void RpcServer::handleTermination() {
 
 
 /**
+ * @brief Broadcast a packet to all connected clients
+ *
+ * Send the specified packet (which should have an rpc_header prepended, followed immediately by
+ * the packet payload) to all connected clients.
+ *
+ * @param packet Packet data to broadcast
+ */
+void RpcServer::broadcastPacket(std::span<const std::byte> packet) {
+    int err;
+
+    for(const auto &[bev, client] : this->clients) {
+        err = bufferevent_write(bev, packet.data(), packet.size());
+
+        if(err != 0) {
+            PLOG_WARNING << "failed to broadcast packet to client " << client->socket << ": "
+                << err;
+        }
+    }
+}
+
+
+
+/**
  * @brief Create a new client data structure
  *
  * Initialize a buffer event (used for event notifications, like the connection being closed; as

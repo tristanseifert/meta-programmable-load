@@ -99,4 +99,33 @@ void ControlEpHandler::handleRpmsgRead(struct bufferevent *bev) {
     if(kDumpRpmsgPackets) {
         DumpPacket(">>> rpmsg", this->rpmsgRxBuf);
     }
+
+    /*
+     * Inspect the header of the packet to route it appropriately. If it's a broadcast packet,
+     * we want to send it to all connected clients.
+     *
+     * Otherwise, figure out what client sent the corresponding message (based on tag) and send
+     * the reply to it.
+     */
+    if(this->rpmsgRxBuf.size() < sizeof(rpc_header)) {
+        throw std::runtime_error("insufficient header size");
+    }
+
+    auto hdr = reinterpret_cast<const rpc_header *>(this->rpmsgRxBuf.data());
+    if(hdr->version != kRpcVersionLatest) {
+        throw std::runtime_error(fmt::format("unsupported rpc version ${:04x}", hdr->version));
+    }
+
+    if(hdr->flags & kRpcFlagBroadcast) {
+        // flood broadcasts to all clients
+        if(auto rpc = this->lrpc.lock()) {
+            rpc->broadcastPacket(this->rpmsgRxBuf);
+        } else {
+            PLOG_WARNING << "no RPC handler to broadcast rpmsg packet!";
+        }
+    } else {
+        // TODO: normal packet processing
+        PLOG_WARNING << "received packet " << fmt::format("tag {:02x} type {:02x}",
+                hdr->tag, hdr->endpoint) << ", not yet handled!";
+    }
 }

@@ -43,6 +43,8 @@ class RpcServer {
             return this->evbase;
         }
 
+        void broadcastPacket(std::span<const std::byte> packet);
+
     private:
         /**
          * @brief Information for a single connected client
