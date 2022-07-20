@@ -36,7 +36,14 @@ struct rpc_header {
     uint8_t endpoint;
     /// message tag: used to identify its response
     uint8_t tag;
-    /// flags: currently only 0x01 is defined, which is set for replies to requests
+    /**
+     * @brief Flags bit field
+     *
+     * The following flags are defined:
+     *
+     * - (1 << 0): Set for replies to a previous request
+     * - (1 << 7): Indicates the message is a broadcast message
+     */
     uint8_t flags;
 
     /// reserved, not currently used: set to 0

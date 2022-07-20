@@ -15,6 +15,7 @@
 #include <plog/Log.h>
 
 #include "ConfdEpHandler.h"
+#include "ControlEpHandler.h"
 #include "Coprocessor.h"
 
 const std::array<Coprocessor::EndpointInfo, Coprocessor::kNumRpcEndpoints> Coprocessor::kRpcChannels{{
@@ -24,6 +25,9 @@ const std::array<Coprocessor::EndpointInfo, Coprocessor::kNumRpcEndpoints> Copro
         .address = 0x420,
         .isLoadControl = true,
         .isRetrievable = false,
+        .makeHandler = [](auto fd, auto lrpc, auto outHandler) {
+            outHandler = std::make_shared<ControlEpHandler>(fd, lrpc);
+        },
     },
     /// Interface to confd
     {
@@ -350,4 +354,25 @@ void Coprocessor::destroyRpcEndpoint(const int fd) {
     if(err < 0) {
         throw std::system_error(errno, std::generic_category(), "RPMSG_DESTROY_EPT_IOCTL");
     }
+}
+
+
+
+/**
+ * @brief Dump a packet to the debug output
+ *
+ * @param what Description of the packet
+ * @param packet Packet data to hexdump
+ */
+void Coprocessor::EndpointHandler::DumpPacket(const std::string_view &what,
+        std::span<const std::byte> packet) {
+    std::stringstream str;
+    for(size_t i = 0; i < packet.size(); i++) {
+        str << fmt::format("{:02x} ", packet[i]);
+        if(i && !(i % 16)) {
+            str << std::endl;
+        }
+    }
+
+    PLOG_DEBUG << what << ":" << std::endl << str.str();
 }

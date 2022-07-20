@@ -30,13 +30,11 @@ class ConfdEpHandler: public Coprocessor::EndpointHandler {
 
         void handleRpmsgRead(struct bufferevent *bev);
 
-        static void DumpPacket(const std::string_view &what, std::span<const std::byte> packet);
-
     private:
         /// Should confd received packets be dumped to log?
-        constexpr static const bool kDumpConfdPackets{true};
+        constexpr static const bool kDumpConfdPackets{false};
         /// Should rpmsg received packets be dumped to log?
-        constexpr static const bool kDumpRpmsgPackets{true};
+        constexpr static const bool kDumpRpmsgPackets{false};
 
         /// when set, the socket needs to be re-created for the next request
         std::atomic_bool needsNewSocket{false};

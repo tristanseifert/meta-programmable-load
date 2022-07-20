@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -42,6 +43,9 @@ class Coprocessor {
                 virtual ~EndpointHandler() = default;
 
             protected:
+                static void DumpPacket(const std::string_view &what,
+                        std::span<const std::byte> packet);
+
                 /// File descriptor of the rpmsg_chrdev we'll handle messages for
                 int remoteEp;
         };

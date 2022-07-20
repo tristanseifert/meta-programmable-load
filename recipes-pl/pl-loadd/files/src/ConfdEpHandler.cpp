@@ -3,7 +3,6 @@
 #include <sys/socket.h>
 
 #include <cerrno>
-#include <sstream>
 #include <system_error>
 
 #include <event2/event.h>
@@ -264,24 +263,4 @@ void ConfdEpHandler::handleRpmsgRead(struct bufferevent *bev) {
     if(err != 0) {
         throw std::runtime_error("failed to write confd->m4 message");
     }
-}
-
-
-
-/**
- * @brief Dump a packet to the debug output
- *
- * @param what Description of the packet
- * @param packet Packet data to hexdump
- */
-void ConfdEpHandler::DumpPacket(const std::string_view &what, std::span<const std::byte> packet) {
-    std::stringstream str;
-    for(size_t i = 0; i < packet.size(); i++) {
-        str << fmt::format("{:02x} ", packet[i]);
-        if(i && !(i % 16)) {
-            str << std::endl;
-        }
-    }
-
-    PLOG_DEBUG << what << ":" << std::endl << str.str();
 }
