@@ -91,21 +91,21 @@ void HomeScreen::initActualValueBox(const std::shared_ptr<shittygui::widgets::Co
     // current
     this->actualCurrentLabel = MakeMeasureLabel(box, kActualCurrentColor,
             shittygui::Point(5, (kYSpacing * 0)), "A", kUnitWidth);
-    this->actualCurrentLabel->setContent("0.000");
+    this->actualCurrentLabel->setContent("<span font_features='tnum'>0.000</span>", true);
 
     // voltage
     this->actualVoltageLabel = MakeMeasureLabel(box, kActualVoltageColor,
             shittygui::Point(5, (kYSpacing * 1)), "V", kUnitWidth);
-    this->actualVoltageLabel->setContent("0.00");
+    this->actualVoltageLabel->setContent("<span font_features='tnum'>1.23</span>", true);
 
     // voltage
     this->actualWattageLabel = MakeMeasureLabel(box, kActualWattageColor,
             shittygui::Point(5, (kYSpacing * 2)), "W", kUnitWidth);
-    this->actualWattageLabel->setContent("0.00");
+    this->actualWattageLabel->setContent("<span font_features='tnum'>7.89</span>", true);
 
     // inside temperature
     this->actualTempLabel = MakeMeasureLabel(box, kActualTempColor, {5, 260}, "°C", kUnitWidth);
-    this->actualTempLabel->setContent("0.0");
+    this->actualTempLabel->setContent("<span font_features='tnum'>4.5</span>", true);
 }
 
 /**
@@ -311,12 +311,11 @@ void HomeScreen::updateClock() {
 
     // format time and date string and set it
     std::stringstream str;
-
     if((tm.tm_sec % 2)) {
-        str << std::put_time(&tm, "%H %M %S\n%b %d");
+        str << std::put_time(&tm, "<span font_features='tnum'>%H %M %S</span>\n%b %d");
     } else {
-        str << std::put_time(&tm, "%H:%M:%S\n%b %d");
+        str << std::put_time(&tm, "<span font_features='tnum'>%H:%M:%S</span>\n%b %d");
     }
 
-    this->clockLabel->setContent(str.str());
+    this->clockLabel->setContent(str.str(), true);
 }

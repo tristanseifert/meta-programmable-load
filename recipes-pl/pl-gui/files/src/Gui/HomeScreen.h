@@ -92,8 +92,7 @@ class HomeScreen: public shittygui::ViewController {
         /// Font size for action buttons
         constexpr static const double kActionFontSize{18.};
 
-        constexpr static const std::string_view kClockFont{"Liberation Sans Narrow"};
-        //constexpr static const std::string_view kClockFont{"Dinish Condensed"};
+        constexpr static const std::string_view kClockFont{"Dinish Condensed"};
         constexpr static const double kClockFontSize{19.};
         constexpr static const shittygui::Color kClockTextColor{0.94, 0.94, 0.94};
 
