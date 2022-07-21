@@ -3,12 +3,16 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <filesystem>
 #include <optional>
 #include <span>
 #include <string>
+#include <vector>
 
 #include <arpa/inet.h>
+
+class DriverBase;
 
 /**
  * @brief Front panel hardware prober
@@ -129,6 +133,15 @@ class Probulator {
 
         void probe();
 
+        void registerDriver(const std::shared_ptr<DriverBase> &driver);
+
+        /**
+         * @brief Get the file descriptor for I²C access
+         */
+        constexpr inline auto getBusFd() const {
+            return this->busFd;
+        }
+
     private:
         void parseIdpromPayload(std::span<const std::byte> payload);
         void parseAndReadSerialNumberPointer(struct cbor_item_t *);
@@ -158,6 +171,9 @@ class Probulator {
         std::optional<std::string> hwDesc;
         /// Serial number of the attached hardware
         std::optional<std::string> hwSerial;
+
+        /// All registered and initialized drivers
+        std::vector<std::shared_ptr<DriverBase>> drivers;
 };
 
 #endif

@@ -4,6 +4,7 @@
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <chrono>
@@ -22,6 +23,7 @@
 #include "Utils/Cbor.h"
 
 #include "Probulator.h"
+#include "drivers/DriverList.h"
 
 /**
  * @brief Initialize the probulator
@@ -77,6 +79,8 @@ Probulator::Probulator(const std::filesystem::path &i2cPath) {
  * @brief Close all allocated resources
  */
 Probulator::~Probulator() {
+    this->drivers.clear();
+
     close(this->busFd);
 }
 
@@ -244,10 +248,26 @@ void Probulator::parseIdpromPayload(std::span<const std::byte> payload) {
             const auto ptr = cbor_bytestring_handle(driverPair.key);
 
             uuids::uuid driverId(ptr, ptr+16);
-            PLOG_DEBUG << "Found driver " << uuids::to_string(driverId);
 
             // try to instantiate the associated driver
-            // TODO: implement this !
+            auto driverIt = std::find_if(gSupportedDrivers.begin(), gSupportedDrivers.end(),
+                    [&driverId](const auto &info) {
+                return (driverId == info.id);
+            });
+            if(driverIt == gSupportedDrivers.end()) {
+                throw std::runtime_error(fmt::format("unsupported driver (id {})",
+                            uuids::to_string(driverId)));
+            }
+
+            const auto &driverInfo = *driverIt;
+            PLOG_DEBUG << "Found driver " << uuids::to_string(driverId) << ": " << driverInfo.name;
+
+            try {
+                driverInfo.constructor(this, driverId, driverPair.value);
+            } catch(const std::exception &e) {
+                PLOG_ERROR << "failed to init driver " << driverInfo.name << ": " << e.what();
+                throw;
+            }
         }
     }
 
@@ -327,6 +347,15 @@ void Probulator::parseAndReadSerialNumberPointer(struct cbor_item_t *array) {
     snChars.resize(totalBytes);
 
     this->hwSerial = std::string(snChars.data(), snChars.size());
+}
+
+/**
+ * @brief Register a driver instance
+ *
+ * Store a reference to the driver so we can cleanly shut it down later.
+ */
+void Probulator::registerDriver(const std::shared_ptr<DriverBase> &driver) {
+    this->drivers.emplace_back(driver);
 }
 
 
