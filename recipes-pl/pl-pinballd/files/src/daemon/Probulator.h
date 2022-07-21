@@ -4,7 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <span>
+#include <string>
 
 #include <arpa/inet.h>
 
@@ -35,7 +37,7 @@ class Probulator {
              *
              * The following flag values are supported:
              *
-             * - (1 << 0): Payload is compressed (using bzip2)
+             * - (1 << 0): Payload is compressed (using lzma/xz)
              */
             uint8_t flags;
 
@@ -86,6 +88,32 @@ class Probulator {
             Manufacturer                = 'manu',
 
             /**
+             * @brief Serial number string
+             *
+             * A string that contains the serial number of the assembly.
+             *
+             * @remark This option is mutually exclusive with SerialPointer.
+             *
+             * @seeAlso SerialPointer
+             */
+            SerialString                = 'snum',
+            /**
+             * @brief Serial number EEPROM pointer
+             *
+             * An array that contains three entries: an I²C bus address, a start address, and a
+             * byte count. This is used to perform a read against a device on the bus to retrieve
+             * the serial number instead of reading a string directly.
+             *
+             * This is useful for instances where the board uses an EEPROM that also contains a
+             * preloaded unique serial number, such as an AT24CS32.
+             *
+             * @remark This option is mutually exclusive with SerialString.
+             *
+             * @seeAlso SerialString
+             */
+            SerialPointer               = 'Snpt',
+
+            /**
              * @brief Required drivers
              *
              * Its value is a map, where each key in turn is a 16-byte UUID encoded as a byte
@@ -103,8 +131,19 @@ class Probulator {
 
     private:
         void parseIdpromPayload(std::span<const std::byte> payload);
+        void parseAndReadSerialNumberPointer(struct cbor_item_t *);
+
+        void readIdprom(const uint8_t deviceAddress, const uint16_t startAddress,
+                std::span<std::byte> outBuffer);
+        void writeIdprom(const uint8_t deviceAddress, const uint16_t startAddress,
+                std::span<const std::byte> data);
+        void writeIdpromPage(const uint8_t deviceAddress, const uint16_t base,
+                std::span<const std::byte> data);
 
     private:
+        // IDPROM page write size
+        constexpr static const size_t kPageSize{32};
+
         /// file descriptor to the I2C bus the device is on
         int busFd{-1};
 
@@ -112,6 +151,13 @@ class Probulator {
         IdpromHeader idpromHeader;
         /// Bus address of the IDPROM
         uint8_t idpromAddress{0};
+
+        /// Currently attached hardware revision
+        std::optional<std::string> hwRevision;
+        /// Attached type of front panel
+        std::optional<std::string> hwDesc;
+        /// Serial number of the attached hardware
+        std::optional<std::string> hwSerial;
 };
 
 #endif

@@ -39,8 +39,14 @@ link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
 pkg_search_module(PKG_GPIOD REQUIRED libgpiod)
 link_directories(${PKG_GPIOD_LIBRARY_DIRS})
 
+pkg_search_module(PKG_LZMA REQUIRED liblzma)
+link_directories(${PKG_LZMA_LIBRARY_DIRS})
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
+
+set(UUID_USING_CXX20_SPAN ON CACHE BOOL "use std::span for uuid" FORCE)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/stduuid EXCLUDE_FROM_ALL)
 
 ###############
 # Create version file
@@ -69,10 +75,12 @@ add_executable(daemon
 )
 set_target_properties(daemon PROPERTIES OUTPUT_NAME pinballd)
 target_include_directories(daemon PRIVATE src/daemon ${CMAKE_CURRENT_LIST_DIR}/include)
-target_link_libraries(daemon PRIVATE plog::plog fmt::fmt)
+target_link_libraries(daemon PRIVATE plog::plog fmt::fmt stduuid)
 
-target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS} ${PKG_GPIOD_INCLUDE_DIRS})
-target_link_libraries(daemon PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES} ${PKG_GPIOD_LIBRARIES})
+target_include_directories(daemon PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS}
+    ${PKG_GPIOD_INCLUDE_DIRS} ${PKG_LZMA_INCLUDE_DIRS})
+target_link_libraries(daemon PRIVATE ${PKG_LIBEVENT_LIBRARIES} ${PKG_LIBCBOR_LIBRARIES}
+    ${PKG_GPIOD_LIBRARIES} ${PKG_LZMA_LIBRARIES})
 
 # add systemd support on linux
 if(UNIX AND NOT APPLE)

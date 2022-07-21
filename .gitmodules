@@ -31,3 +31,6 @@
 [submodule "recipes-pl/pl-gui/files/lib/shittygui"]
 	path = recipes-pl/pl-gui/files/lib/shittygui
 	url = git@github.com:tristanseifert/shittygui.cpp.git
+[submodule "recipes-pl/pl-pinballd/files/lib/stduuid"]
+	path = recipes-pl/pl-pinballd/files/lib/stduuid
+	url = https://github.com/mariusbancila/stduuid.git
