@@ -1,15 +1,22 @@
 #include <getopt.h>
-#include <event2/event.h>
+#include <unistd.h>
 
 #include <atomic>
+#include <cctype>
+#include <filesystem>
+#include <memory>
 #include <iostream>
 
+#include <event2/event.h>
+#include <fmt/format.h>
 #include <plog/Log.h>
+#include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Appenders/ConsoleAppender.h>
 #include <plog/Formatters/FuncMessageFormatter.h>
 #include <plog/Formatters/TxtFormatter.h>
 #include <plog/Init.h>
 
+#include "Probulator.h"
 #include "Watchdog.h"
 #include "version.h"
 
@@ -27,12 +34,26 @@ std::atomic_bool gRun{true};
  * @param simple Whether the simple message output format (no timestamps) is used
  */
 static void InitLog(const plog::Severity level, const bool simple) {
+    // figure out if the console is a tty
+    const bool isTty = (isatty(fileno(stdout)) == 1);
+
+    // set up the logger
     if(simple) {
-        static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
-        plog::init(level, &ttyAppender);
+        if(isTty) {
+            static plog::ColorConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        } else {
+            static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        }
     } else {
-        static plog::ConsoleAppender<plog::TxtFormatter> ttyAppender;
-        plog::init(level, &ttyAppender);
+        if(isTty) {
+            static plog::ColorConsoleAppender<plog::TxtFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        } else {
+            static plog::ConsoleAppender<plog::TxtFormatter> ttyAppender;
+            plog::init(level, &ttyAppender);
+        }
     }
 
     PLOG_VERBOSE << "Logging initialized - pinballd " << kVersion << " (" << kVersionGitHash << ")";
@@ -67,6 +88,9 @@ int main(const int argc, char * const * argv) {
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
 
+    std::shared_ptr<Probulator> probe;
+    std::filesystem::path frontI2cBus;
+
     // parse command line
     int c;
     while(1) {
@@ -78,6 +102,8 @@ int main(const int argc, char * const * argv) {
             {"log-level",               optional_argument, 0, 0},
             // log style (simple = no timestamps, for systemd/syslog use)
             {"log-simple",              no_argument, 0, 0},
+            // i2c bus on which the front panel lives
+            {"front-i2c-bus",           required_argument, 0, 0},
             {nullptr,                   0, 0, 0},
         };
 
@@ -125,21 +151,56 @@ int main(const int argc, char * const * argv) {
             else if(index == 2) {
                 logSimple = true;
             }
+            /*
+             * I2C bus: This is parsed as either a number (in which case it's appended to the I2C
+             * bus device base path) or as a whole ass string. This determination is made by
+             * checking if the first non-space character is a number.
+             */
+            else if(index == 3) {
+                bool isPath{true};
+                const char *argReadPtr = optarg;
+                while(const auto ch = *argReadPtr) {
+                    // skip spaces
+                    if(isspace(ch)) {
+                        argReadPtr++;
+                        continue;
+                    }
+
+                    isPath = !isdigit(ch);
+                    break;
+                }
+
+                if(isPath) {
+                    frontI2cBus = optarg;
+                } else {
+                    frontI2cBus = fmt::format("/dev/i2c-{}", optarg);
+                }
+            }
         }
     }
 
     if(socketPath.empty()) {
         std::cerr << "you must specify a socket path (--socket)" << std::endl;
-        return -1;
+        return 1;
     }
 
     // basic initialize
     InitLog(logLevel, logSimple);
     Watchdog::Init();
 
-    // TODO: probe hardware and init drivers
-
     // set up and RPC main loop
 
+    // probe hardware and init drivers
+    try {
+        probe = std::make_shared<Probulator>(frontI2cBus);
+
+        probe->probe();
+    } catch(const std::exception &e) {
+        PLOG_ERROR << "Failed to probe hardware: " << e.what();
+        return 1;
+    }
+
     // clean up
+    PLOG_INFO << "cleaning up";
+    probe.reset();
 }

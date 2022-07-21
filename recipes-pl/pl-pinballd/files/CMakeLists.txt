@@ -61,6 +61,7 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/src/version.c.in ${VERSION_FILE} @ONLY)
 # The actual UI driver daemon
 add_executable(daemon
     src/daemon/main.cpp
+    src/daemon/Probulator.cpp
     src/daemon/Watchdog.cpp
     src/daemon/drivers/gpio/Pca9535.cpp
     src/daemon/drivers/lcd/Nt35510.cpp
