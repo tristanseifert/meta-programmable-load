@@ -18,7 +18,6 @@
 
 #include "EventLoop.h"
 #include "Probulator.h"
-#include "RpcServer.h"
 #include "Watchdog.h"
 #include "version.h"
 
@@ -91,7 +90,6 @@ int main(const int argc, char * const * argv) {
     bool logSimple{false};
 
     std::shared_ptr<EventLoop> ev;
-    std::shared_ptr<RpcServer> rpc;
     std::shared_ptr<Probulator> probe;
     std::filesystem::path frontI2cBus;
 
@@ -194,10 +192,8 @@ int main(const int argc, char * const * argv) {
 
     // set up event loop and rpc
     try {
-        ev = std::make_shared<EventLoop>();
+        ev = std::make_shared<EventLoop>(socketPath);
         ev->arm();
-
-        rpc = std::make_shared<RpcServer>(socketPath);
     } catch(const std::exception &e) {
         PLOG_ERROR << "Event loop setup failed: " << e.what();
         return 1;
@@ -226,6 +222,5 @@ int main(const int argc, char * const * argv) {
     PLOG_INFO << "cleaning up";
     probe.reset();
 
-    rpc.reset();
     ev.reset();
 }

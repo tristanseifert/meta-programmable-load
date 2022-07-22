@@ -5,7 +5,12 @@
 
 #include <array>
 #include <cstddef>
+#include <filesystem>
 #include <memory>
+
+namespace Rpc {
+class Server;
+}
 
 /**
  * @brief Main event loop
@@ -18,7 +23,7 @@
  */
 class EventLoop: public std::enable_shared_from_this<EventLoop> {
     public:
-        EventLoop();
+        EventLoop(const std::filesystem::path &rpcSocketPath);
         ~EventLoop();
 
         /**
@@ -38,6 +43,13 @@ class EventLoop: public std::enable_shared_from_this<EventLoop> {
          */
         inline auto getEvBase() {
             return this->evbase;
+        }
+
+        /**
+         * @brief Get the RPC server
+         */
+        constexpr inline auto &getRpcServer() {
+            return this->rpc;
         }
 
         static std::shared_ptr<EventLoop> Current();
@@ -68,6 +80,9 @@ class EventLoop: public std::enable_shared_from_this<EventLoop> {
 
         /// libevent main loop
         struct event_base *evbase{nullptr};
+
+        /// Local RPC server
+        std::shared_ptr<Rpc::Server> rpc;
 };
 
 #endif

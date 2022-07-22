@@ -70,7 +70,8 @@ add_executable(daemon
     src/daemon/Probulator.cpp
     src/daemon/Watchdog.cpp
     src/daemon/EventLoop.cpp
-    src/daemon/RpcServer.cpp
+    src/daemon/Rpc/Server.cpp
+    src/daemon/Rpc/Client.cpp
     src/daemon/drivers/gpio/Pca9535.cpp
     src/daemon/drivers/lcd/Nt35510.cpp
     src/daemon/drivers/touch/Ft6336.cpp

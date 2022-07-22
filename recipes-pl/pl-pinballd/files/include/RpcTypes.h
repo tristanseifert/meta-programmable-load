@@ -72,7 +72,10 @@ struct rpc_header {
  */
 enum rpc_endpoint {
     kRpcEndpointNoOp                    = 0x00,
+    /// Update the types of broadcasts we want to receive
+    kRpcEndpointBroadcastConfig         = 0x01,
+    /// User interface event broadcast
+    kRpcEndpointUiEvent                 = 0x02,
 };
 
 #endif
-

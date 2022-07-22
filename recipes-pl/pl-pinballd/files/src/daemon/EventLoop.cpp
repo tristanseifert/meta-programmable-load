@@ -6,6 +6,7 @@
 
 #include "EventLoop.h"
 #include "Watchdog.h"
+#include "Rpc/Server.h"
 
 // declared in main.cpp
 extern std::atomic_bool gRun;
@@ -21,8 +22,10 @@ thread_local std::weak_ptr<EventLoop> EventLoop::gCurrentEventLoop;
 
 /**
  * @brief Initialize the event loop
+ *
+ * @param rpcSocketPath Path to the RPC socket on the filesystem
  */
-EventLoop::EventLoop() {
+EventLoop::EventLoop(const std::filesystem::path &rpcSocketPath) {
     // create the event base
     this->evbase = event_base_new();
     if(!this->evbase) {
@@ -32,6 +35,11 @@ EventLoop::EventLoop() {
     // add default event sources
     this->initWatchdogEvent();
     this->initSignalEvents();
+
+    // set up RPC boi
+    if(!rpcSocketPath.empty()) {
+        this->rpc = std::make_shared<Rpc::Server>(this, rpcSocketPath);
+    }
 }
 
 /**
@@ -40,7 +48,7 @@ EventLoop::EventLoop() {
  * @remark The event loop should be stopped when destroying.
  */
 EventLoop::~EventLoop() {
-    event_base_free(this->evbase);
+    this->rpc.reset();
 
     // release events
     for(auto ev : this->signalEvents) {
@@ -53,6 +61,8 @@ EventLoop::~EventLoop() {
     if(this->watchdogEvent) {
         event_free(this->watchdogEvent);
     }
+
+    event_base_free(this->evbase);
 }
 
 /**

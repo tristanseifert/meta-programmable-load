@@ -17,6 +17,8 @@
 #include <plog/Log.h>
 
 #include "EventLoop.h"
+#include "RpcTypes.h"
+#include "Rpc/Server.h"
 #include "Utils/Cbor.h"
 #include "Ft6336.h"
 
@@ -352,6 +354,8 @@ void Ft6336::decodeTouchPoint(const size_t point, std::span<const uint8_t, 6> re
  * Notify all connected clients that the touch positions have changed.
  */
 void Ft6336::sendTouchStateUpdate() {
+    cbor_item_t *temp{nullptr};
+
     if(this->p1HasData && this->touchIds[0] != 0xff) {
         const auto &pt = this->touchPositions.at(this->touchIds[0]);
         PLOG_DEBUG << fmt::format("Touch 1: ({}, {})", pt.first, pt.second);
@@ -360,4 +364,85 @@ void Ft6336::sendTouchStateUpdate() {
         const auto &pt = this->touchPositions.at(this->touchIds[1]);
         PLOG_DEBUG << fmt::format("Touch 2: ({}, {})", pt.first, pt.second);
     }
+
+    /*
+     * Serialize the touch event as a CBOR map. This contains two keys; type (which is the string
+     * "touch") and "touchData" which is in turn another map, where each key is a touch index.
+     *
+     * Values in the inner map are either `null` if there's no valid data for this touch, or yet
+     * another map. This innermost map can have the key "position" which is an array containing
+     * the touch position x/y tuple.
+     */
+    auto root = cbor_new_definite_map(2);
+    cbor_map_add(root, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_string("type")),
+        .value = cbor_move(cbor_build_string("touch"))
+    });
+
+    auto touches = cbor_new_definite_map(2);
+
+    cbor_map_add(root, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_string("touchData")),
+        .value = cbor_move(touches)
+    });
+
+    // touch point 1
+    if(this->p1HasData && this->touchIds[0] != 0xff) {
+        const auto &pt = this->touchPositions.at(this->touchIds[0]);
+        temp = this->encodeTouchState(pt);
+    } else {
+        temp = cbor_new_null();
+    }
+    cbor_map_add(root, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_uint8(0)),
+        .value = cbor_move(temp),
+    });
+
+    // touch point 2
+    if(this->p2HasData && this->touchIds[1] != 0xff) {
+        const auto &pt = this->touchPositions.at(this->touchIds[1]);
+        temp = this->encodeTouchState(pt);
+    } else {
+        temp = cbor_new_null();
+    }
+    cbor_map_add(root, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_uint8(1)),
+        .value = cbor_move(temp),
+    });
+
+    // serialize the CBOR structure
+    size_t rootBufLen;
+    unsigned char *rootBuf{nullptr};
+    const size_t serializedBytes = cbor_serialize_alloc(root, &rootBuf, &rootBufLen);
+    cbor_decref(&root);
+
+    // now broadcast this packet
+    try {
+        EventLoop::Current()->getRpcServer()->broadcastRaw(Rpc::BroadcastType::TouchEvent,
+                kRpcEndpointUiEvent, {reinterpret_cast<std::byte *>(rootBuf), serializedBytes});
+        free(rootBuf);
+    } catch(const std::exception &) {
+        free(rootBuf);
+        throw;
+    }
 }
+
+/**
+ * @brief Encode data for a single touch point
+ */
+struct cbor_item_t *Ft6336::encodeTouchState(const TouchPosition &pos) {
+    auto map = cbor_new_definite_map(1);
+
+    // make position array
+    auto posArray = cbor_new_definite_array(2);
+    cbor_array_push(posArray, cbor_move(cbor_build_uint16(pos.first)));
+    cbor_array_push(posArray, cbor_move(cbor_build_uint16(pos.second)));
+
+    cbor_map_add(map, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_string("position")),
+        .value = cbor_move(posArray)
+    });
+
+    return map;
+}
+

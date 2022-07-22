@@ -56,7 +56,9 @@ class Ft6336: public DriverBase, public std::enable_shared_from_this<Ft6336> {
         void updateTouchState();
         void clearTouchPoint(const size_t point);
         void decodeTouchPoint(const size_t point, std::span<const uint8_t, 6> regData);
+
         void sendTouchStateUpdate();
+        struct cbor_item_t *encodeTouchState(const TouchPosition &);
 
         /**
          * @brief Read a device register
