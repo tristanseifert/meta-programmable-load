@@ -22,5 +22,5 @@ inherit pkgconfig cmake
 inherit useradd
 USERADD_PACKAGES = "${PN}"
 
-USERADD_PARAM:${PN} = "-u 6900 -d /persistent/appdata/ui -s /bin/false -g load load-ui"
-
+# USERADD_PARAM:${PN} = "-u 6900 -d /persistent/appdata/ui -s /bin/false -g load load-ui"
+USERADD_PARAM:${PN} = "-u 6900 -d /persistent/appdata/ui -s /bin/false load-ui"

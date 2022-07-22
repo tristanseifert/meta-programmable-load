@@ -1,6 +1,6 @@
 SUMMARY="Portable, extensible logging library for C++"
 LICENSE = "MIT"
-LIC_FILES_CHKSUM = "file://LICENSE"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=5e2a1e7f8253c4d42c1d8cd06eafdeed"
 
 SRC_URI = "git://github.com/SergiusTheBest/plog;branch=master;protocol=https"
 # 1.1.8

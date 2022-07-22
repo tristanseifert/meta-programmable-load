@@ -223,6 +223,8 @@ int main(const int argc, char * const * argv) {
 
         auto home = std::make_shared<Gui::HomeScreen>(rpc);
         gui->setRootViewController(home);
+
+        pinballRpc->enableUiEvents();
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up gui: " << e.what();
         return 1;
@@ -240,6 +242,8 @@ int main(const int argc, char * const * argv) {
     }
 
     // clean up GUI
+    pinballRpc->disableUiEvents();
+
     gui.reset();
 
     // clean up DRM resources

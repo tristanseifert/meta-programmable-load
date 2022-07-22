@@ -15,6 +15,7 @@
 #include <fmt/format.h>
 #include <plog/Log.h>
 
+#include "Utils/Cbor.h"
 #include "EventLoop.h"
 #include "LoaddClient.h"
 #include "RpcTypes.h"
