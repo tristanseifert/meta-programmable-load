@@ -22,6 +22,7 @@
 #include "Gui/IconManager.h"
 #include "Gui/Renderer.h"
 #include "Gui/HomeScreen.h"
+#include "Rpc/PinballClient.h"
 
 /// Whether the UI task shall continue running
 std::atomic_bool gRun{true};
@@ -94,6 +95,8 @@ static void InitLibevent() {
 int main(const int argc, char * const * argv) {
     std::shared_ptr<EventLoop> ev;
     std::shared_ptr<LoaddClient> rpc;
+    std::shared_ptr<Rpc::PinballClient> pinballRpc;
+
     std::shared_ptr<Framebuffer> fb;
     std::shared_ptr<Gui::Renderer> gui;
 
@@ -104,6 +107,8 @@ int main(const int argc, char * const * argv) {
     std::filesystem::path iconBasePath{"/usr/share/pl-gui/icons"};
     // path to the loadd socket
     std::filesystem::path loaddSocketPath;
+    /// path to the pinballd socket
+    std::filesystem::path pinballdSocketPath;
 
     // parse command line
     int c;
@@ -118,6 +123,8 @@ int main(const int argc, char * const * argv) {
             {"iconbase",                required_argument, 0, 0},
             /// path to the loadd socket
             {"loadd-socket",            required_argument, 0, 0},
+            /// path to the pinballd socket
+            {"pinballd-socket",         required_argument, 0, 0},
             {nullptr,                   0, 0, 0},
         };
 
@@ -170,6 +177,10 @@ int main(const int argc, char * const * argv) {
             else if(index == 3) {
                 loaddSocketPath = optarg;
             }
+            // pinballd socket path
+            else if(index == 4) {
+                pinballdSocketPath = optarg;
+            }
         }
     }
 
@@ -183,10 +194,11 @@ int main(const int argc, char * const * argv) {
     ev->arm();
 
     // set up RPC to loadd
-    PLOG_DEBUG << "initializing loadd rpc";
+    PLOG_DEBUG << "initializing rpc";
 
     try {
         rpc = std::make_shared<LoaddClient>(ev, loaddSocketPath);
+        pinballRpc = std::make_shared<Rpc::PinballClient>(ev, pinballdSocketPath);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up loadd rpc: " << e.what();
         return 1;
@@ -236,5 +248,7 @@ int main(const int argc, char * const * argv) {
 
     // clean up everything else
     rpc.reset();
+    pinballRpc.reset();
+
     ev.reset();
 }

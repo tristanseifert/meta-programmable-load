@@ -87,6 +87,7 @@ add_executable(gui
     src/Framebuffer.cpp
     src/LoaddClient.cpp
     src/Watchdog.cpp
+    src/Rpc/PinballClient.cpp
     src/Gui/IconManager.cpp
     src/Gui/Renderer.cpp
     src/Gui/HomeScreen.cpp
@@ -112,6 +113,10 @@ INSTALL(TARGETS gui RUNTIME DESTINATION /usr/sbin)
 
 # copy icons
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/data/icons/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/icons)
+
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/icons
+    DESTINATION /usr/share/pl-gui
+    PATTERN "README.md" EXCLUDE)
 
 # add systemd support on linux
 if(UNIX AND NOT APPLE)

@@ -40,8 +40,6 @@ EventLoop::EventLoop() {
  * @remark The event loop should be stopped when destroying.
  */
 EventLoop::~EventLoop() {
-    event_base_free(this->evbase);
-
     // release events
     for(auto ev : this->signalEvents) {
         if(!ev) {
@@ -53,6 +51,8 @@ EventLoop::~EventLoop() {
     if(this->watchdogEvent) {
         event_free(this->watchdogEvent);
     }
+
+    event_base_free(this->evbase);
 }
 
 /**

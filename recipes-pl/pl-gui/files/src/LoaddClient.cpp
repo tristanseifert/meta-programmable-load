@@ -20,6 +20,14 @@
 #include "RpcTypes.h"
 
 /**
+ * @brief RPC message endpoints
+ */
+enum rpc_endpoint {
+    kRpcEndpointNoOp                    = 0x00,
+    kRpcEndpointMeasurement             = 0x10,
+};
+
+/**
  * @brief Open an RPC connection to loadd
  *
  * @param ev Event loop to install events on
@@ -67,7 +75,7 @@ LoaddClient::LoaddClient(const std::shared_ptr<EventLoop> &ev,
     // add events to rpc server's run loop
     err = bufferevent_enable(this->bev, EV_READ);
     if(err == -1) {
-        throw std::runtime_error("failed to enable bufferevent (confd)");
+        throw std::runtime_error("failed to enable bufferevent (loadd)");
     }
 }
 

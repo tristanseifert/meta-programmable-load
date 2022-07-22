@@ -67,13 +67,5 @@ struct rpc_header {
     uint8_t payload[];
 } __attribute__((packed));
 
-/**
- * @brief RPC message endpoints
- */
-enum rpc_endpoint {
-    kRpcEndpointNoOp                    = 0x00,
-    kRpcEndpointMeasurement             = 0x10,
-};
-
 #endif
 
