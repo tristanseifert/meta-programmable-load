@@ -57,9 +57,9 @@ include_directories(${PKG_LIBKMS_INCLUDE_DIRS})
 # Remote dependencies (as submodules)
 #add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
-
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/shittygui EXCLUDE_FROM_ALL)
+
+find_package(fmt REQUIRED)
 
 ###############
 # Create version file

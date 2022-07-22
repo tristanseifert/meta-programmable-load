@@ -42,8 +42,8 @@ link_directories(${PKG_GPIOD_LIBRARY_DIRS})
 pkg_search_module(PKG_LZMA REQUIRED liblzma)
 link_directories(${PKG_LZMA_LIBRARY_DIRS})
 
+find_package(fmt REQUIRED)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
 
 set(UUID_USING_CXX20_SPAN ON CACHE BOOL "use std::span for uuid" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/stduuid EXCLUDE_FROM_ALL)

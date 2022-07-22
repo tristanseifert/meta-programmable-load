@@ -37,10 +37,11 @@ link_directories(${PKG_LIBCBOR_LIBRARY_DIRS})
 pkg_search_module(PKG_LIBEVENT REQUIRED libevent)
 link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
 
+find_package(fmt REQUIRED)
+
 # Remote dependencies
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/fmt EXCLUDE_FROM_ALL)
 
 # option(SQLITECPP_INTERNAL_SQLITE "Add the internal SQLite3 source to the project." ON CACHE)
 set(SQLITECPP_INTERNAL_SQLITE OFF CACHE BOOL "")
