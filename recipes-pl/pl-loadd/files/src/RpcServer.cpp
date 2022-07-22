@@ -178,12 +178,10 @@ void RpcServer::initSocketEvent() {
 RpcServer::~RpcServer() {
     int err;
 
-    // shut down event loop
-    event_base_free(this->evbase);
-
     // close and unlink listening socket
     PLOG_DEBUG << "Closing RPC server socket";
 
+    event_free(this->listenEvent);
     close(this->listenSock);
 
     err = unlink(Config::GetRpcSocketPath().c_str());
@@ -196,7 +194,6 @@ RpcServer::~RpcServer() {
     this->clients.clear();
 
     // release events
-    event_free(this->listenEvent);
     for(auto ev : this->signalEvents) {
         if(!ev) {
             continue;
@@ -207,6 +204,9 @@ RpcServer::~RpcServer() {
     if(this->watchdogEvent) {
         event_free(this->watchdogEvent);
     }
+
+    // shut down event loop
+    event_base_free(this->evbase);
 }
 
 /**
@@ -439,12 +439,12 @@ RpcServer::Client::Client(RpcServer *server, const int fd) : socket(fd) {
  * This closes the client socket, as well as releasing the libevent resources.
  */
 RpcServer::Client::~Client() {
-    if(this->socket != -1) {
-        close(this->socket);
-    }
-
     if(this->event) {
         bufferevent_free(this->event);
+    }
+
+    if(this->socket != -1) {
+        close(this->socket);
     }
 }
 

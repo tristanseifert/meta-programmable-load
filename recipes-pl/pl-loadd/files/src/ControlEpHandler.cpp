@@ -117,6 +117,10 @@ void ControlEpHandler::handleRpmsgRead(struct bufferevent *bev) {
     }
 
     if(hdr->flags & kRpcFlagBroadcast) {
+        if(kDumpRpmsgBroadcasts) {
+            DumpPacket("<<< rpmsg broadcast", this->rpmsgRxBuf);
+        }
+
         // flood broadcasts to all clients
         if(auto rpc = this->lrpc.lock()) {
             rpc->broadcastPacket(this->rpmsgRxBuf);

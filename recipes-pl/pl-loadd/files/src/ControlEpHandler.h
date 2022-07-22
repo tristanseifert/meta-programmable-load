@@ -24,7 +24,9 @@ class ControlEpHandler: public Coprocessor::EndpointHandler {
 
     private:
         /// Should rpmsg received packets be dumped to log?
-        constexpr static const bool kDumpRpmsgPackets{true};
+        constexpr static const bool kDumpRpmsgPackets{false};
+        /// Should rpmsg broadcast packets be dumped to log?
+        constexpr static const bool kDumpRpmsgBroadcasts{false};
 
         /// event wrapping the local rpmsg channel
         struct bufferevent *rpmsgBev{nullptr};
