@@ -73,6 +73,13 @@ class Nt35510 {
         uint8_t writeWord(const bool rw, const bool dc, const bool upper, const uint8_t payload = 0);
 
     private:
+        /// Are register reads dumped to the terminal?
+        constexpr static const bool kLogRegRead{false};
+        /// Are register writes dumped to the terminal?
+        constexpr static const bool kLogRegWrite{false};
+        /// read (and print out) display diagnostic information during startup
+        constexpr static const bool kReadDiagnostics{false};
+
         /// Total number of supported displays
         constexpr static const size_t kNumPanels{1};
         /// Initialization info for all supported displays
@@ -86,7 +93,7 @@ class Nt35510 {
         struct gpiod_line *devCs{nullptr};
 
         /// Frequency to use for SPI device accesses (Hz)
-        uint32_t busSpeed{5'000'000};
+        uint32_t busSpeed{7'500'000};
 
         /// GPIO chip the reset line is connected to
         std::shared_ptr<Drivers::Gpio::GpioChip> gpioChip;

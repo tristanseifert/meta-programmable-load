@@ -11,6 +11,9 @@
 
 #include "drivers/touch/Ft6336.h"
 
+#include "drivers/gpio/Pca9535.h"
+#include "drivers/lcd/Nt35510.h"
+
 class Probulator;
 
 /**
@@ -68,7 +71,8 @@ static const std::array<DriverInfo, 2> gSupportedDrivers{{
         .id = uuids::uuid{{0x08, 0x81, 0xBD, 0xAD, 0x2F, 0xD4, 0x45, 0xB0, 0x84, 0x36, 0x36, 0xDB, 0x75, 0x36, 0xA1, 0x9E}},
         .name = "NT35510 Display Controller",
         .constructor = [](auto probulator, auto id, auto args) {
-            // TODO: implement
+            auto expander = std::make_shared<Drivers::Gpio::Pca9535>(probulator->getBusFd(), 0x20);
+            Drivers::Lcd::Nt35510("/dev/spidev0.1", expander, 8);
         }
     },
 }};

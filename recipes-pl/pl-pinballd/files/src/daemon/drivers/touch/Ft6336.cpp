@@ -356,15 +356,6 @@ void Ft6336::decodeTouchPoint(const size_t point, std::span<const uint8_t, 6> re
 void Ft6336::sendTouchStateUpdate() {
     cbor_item_t *temp{nullptr};
 
-    if(this->p1HasData && this->touchIds[0] != 0xff) {
-        const auto &pt = this->touchPositions.at(this->touchIds[0]);
-        PLOG_DEBUG << fmt::format("Touch 1: ({}, {})", pt.first, pt.second);
-    }
-    if(this->p2HasData && this->touchIds[1] != 0xff) {
-        const auto &pt = this->touchPositions.at(this->touchIds[1]);
-        PLOG_DEBUG << fmt::format("Touch 2: ({}, {})", pt.first, pt.second);
-    }
-
     /*
      * Serialize the touch event as a CBOR map. This contains two keys; type (which is the string
      * "touch") and "touchData" which is in turn another map, where each key is a touch index.
@@ -381,19 +372,15 @@ void Ft6336::sendTouchStateUpdate() {
 
     auto touches = cbor_new_definite_map(2);
 
-    cbor_map_add(root, (struct cbor_pair) {
-        .key = cbor_move(cbor_build_string("touchData")),
-        .value = cbor_move(touches)
-    });
-
     // touch point 1
     if(this->p1HasData && this->touchIds[0] != 0xff) {
         const auto &pt = this->touchPositions.at(this->touchIds[0]);
+        // PLOG_DEBUG << fmt::format("Touch 1: ({}, {})", pt.first, pt.second);
         temp = this->encodeTouchState(pt);
     } else {
         temp = cbor_new_null();
     }
-    cbor_map_add(root, (struct cbor_pair) {
+    cbor_map_add(touches, (struct cbor_pair) {
         .key = cbor_move(cbor_build_uint8(0)),
         .value = cbor_move(temp),
     });
@@ -401,13 +388,19 @@ void Ft6336::sendTouchStateUpdate() {
     // touch point 2
     if(this->p2HasData && this->touchIds[1] != 0xff) {
         const auto &pt = this->touchPositions.at(this->touchIds[1]);
+        // PLOG_DEBUG << fmt::format("Touch 2: ({}, {})", pt.first, pt.second);
         temp = this->encodeTouchState(pt);
     } else {
         temp = cbor_new_null();
     }
-    cbor_map_add(root, (struct cbor_pair) {
+    cbor_map_add(touches, (struct cbor_pair) {
         .key = cbor_move(cbor_build_uint8(1)),
         .value = cbor_move(temp),
+    });
+
+    cbor_map_add(root, (struct cbor_pair) {
+        .key = cbor_move(cbor_build_string("touchData")),
+        .value = cbor_move(touches)
     });
 
     // serialize the CBOR structure

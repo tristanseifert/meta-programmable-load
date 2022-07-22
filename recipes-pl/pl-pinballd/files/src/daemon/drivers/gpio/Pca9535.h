@@ -25,6 +25,11 @@ class Pca9535: public GpioChip {
         uint32_t getPinState() override { return 0; };
 
     private:
+        /// Are register reads dumped to the terminal?
+        constexpr static const bool kLogRegRead{false};
+        /// Are register writes dumped to the terminal?
+        constexpr static const bool kLogRegWrite{false};
+
         /// Register names and offsets for in the chip
         enum class Register: uint8_t {
             Input0                      = 0x00,

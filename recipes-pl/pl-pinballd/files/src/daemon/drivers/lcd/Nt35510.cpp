@@ -502,18 +502,11 @@ Nt35510::Nt35510(const std::filesystem::path &spidevPath,
         PLOG_FATAL << "failed to set gpio line as output";
     }
 
-    uint8_t balls;
-    this->regRead(0x0c00, balls);
-    PLOG_INFO << "pixel format pre reset: " << fmt::format("{:02x}", balls);
-
     // configure the reset line and assert it
     using PinMode = Drivers::Gpio::GpioChip;
     this->gpioChip->configurePin(this->gpioLine, PinMode::OutputPushPull);
 
     this->toggleReset();
-
-    this->regRead(0x0c00, balls);
-    PLOG_INFO << "pixel format post reset: " << fmt::format("{:02x}", balls);
 
     // read display id
     std::array<uint8_t, 3> displayId{};
@@ -521,37 +514,39 @@ Nt35510::Nt35510(const std::filesystem::path &spidevPath,
     this->regRead(0x0400, displayId[0]);
     this->regRead(0x0401, displayId[1]);
     this->regRead(0x0402, displayId[2]);
-    PLOG_INFO << "Display id 1: " << fmt::format("{:02x} {:02x} {:02x}", displayId[0], displayId[1],
+    PLOG_DEBUG << "Display id 1: " << fmt::format("{:02x} {:02x} {:02x}", displayId[0], displayId[1],
             displayId[2]);
 
     this->regRead(0xDA00, displayId[0]);
     this->regRead(0xDB00, displayId[1]);
     this->regRead(0xDC00, displayId[2]);
-    PLOG_INFO << "Display id 2: " << fmt::format("{:02x} {:02x} {:02x}", displayId[0], displayId[1],
+    PLOG_DEBUG << "Display id 2: " << fmt::format("{:02x} {:02x} {:02x}", displayId[0], displayId[1],
             displayId[2]);
 
     // apply initialization sequence and enable display
     this->runInitSequence(gPanelData[0]);
     this->enableDisplay();
 
-    // read display signal mode
-    this->regRead(0x0a00, displayId[0]);
-    PLOG_INFO << "power mode: " << fmt::format("{:02x}", displayId[0]);
+    if(kReadDiagnostics) {
+        // read display signal mode
+        this->regRead(0x0a00, displayId[0]);
+        PLOG_DEBUG << "power mode: " << fmt::format("{:02x}", displayId[0]);
 
-    this->regRead(0x0b00, displayId[0]);
-    PLOG_INFO << "DMADCTL: " << fmt::format("{:02x}", displayId[0]);
+        this->regRead(0x0b00, displayId[0]);
+        PLOG_DEBUG << "DMADCTL: " << fmt::format("{:02x}", displayId[0]);
 
-    this->regRead(0x0c00, displayId[0]);
-    PLOG_INFO << "pixel format: " << fmt::format("{:02x}", displayId[0]);
+        this->regRead(0x0c00, displayId[0]);
+        PLOG_DEBUG << "pixel format: " << fmt::format("{:02x}", displayId[0]);
 
-    this->regRead(0x0d00, displayId[0]);
-    PLOG_INFO << "display mode: " << fmt::format("{:02x}", displayId[0]);
+        this->regRead(0x0d00, displayId[0]);
+        PLOG_DEBUG << "display mode: " << fmt::format("{:02x}", displayId[0]);
 
-    this->regRead(0x0e00, displayId[0]);
-    PLOG_INFO << "signal mode: " << fmt::format("{:02x}", displayId[0]);
+        this->regRead(0x0e00, displayId[0]);
+        PLOG_DEBUG << "signal mode: " << fmt::format("{:02x}", displayId[0]);
 
-    this->regRead(0x0f00, displayId[0]);
-    PLOG_INFO << "diagnostic state: " << fmt::format("{:02x}", displayId[0]);
+        this->regRead(0x0f00, displayId[0]);
+        PLOG_DEBUG << "diagnostic state: " << fmt::format("{:02x}", displayId[0]);
+    }
 }
 
 /**
@@ -621,7 +616,7 @@ void Nt35510::runInitSequence(const PanelData &data) {
 void Nt35510::enableDisplay() {
     // start up (turn off sleep mode)
     this->regWrite(0x1100);
-    usleep(125 * 1000);
+    usleep(100 * 1000);
 
     // display on
     this->regWrite(0x2900);
@@ -638,15 +633,15 @@ void Nt35510::enableDisplay() {
 void Nt35510::toggleReset() {
     // de-assert reset (1)
     this->gpioChip->setPinState(this->gpioLine, true);
-    usleep(150 * 1000);
+    usleep(15 * 1000);
 
     // assert reset (0)
     this->gpioChip->setPinState(this->gpioLine, false);
-    usleep(150 * 1000);
+    usleep(15 * 1000);
 
     // de-assert reset (1)
     this->gpioChip->setPinState(this->gpioLine, true);
-    usleep(150 * 1000);
+    usleep(15 * 1000);
 }
 
 /**
@@ -656,10 +651,12 @@ void Nt35510::toggleReset() {
  * byte of data.
  */
 void Nt35510::regWrite(const uint16_t address, std::optional<const uint8_t> value) {
-    if(value) {
-        PLOG_DEBUG << "<< " << fmt::format("reg {:04x} = {:02x}", address, *value);
-    } else {
-        PLOG_DEBUG << "<< " << fmt::format("cmd {:04x}", address);
+    if(kLogRegWrite) {
+        if(value) {
+            PLOG_DEBUG << "<< " << fmt::format("reg {:04x} = {:02x}", address, *value);
+        } else {
+            PLOG_DEBUG << "<< " << fmt::format("cmd {:04x}", address);
+        }
     }
 
     // write the register address
@@ -683,7 +680,9 @@ void Nt35510::regWrite(const uint16_t address, std::optional<const uint8_t> valu
  * @param outValue Variable to receive the byte content of the register
  */
 void Nt35510::regRead(const uint16_t address, uint8_t &outValue) {
-    PLOG_DEBUG << ">> " << fmt::format("reg {:04x}", address);
+    if(kLogRegRead) {
+        PLOG_DEBUG << ">> " << fmt::format("reg {:04x}", address);
+    }
 
     // write the register address
     this->writeWord(false, false, true, ((address & 0xFF00) >> 8));

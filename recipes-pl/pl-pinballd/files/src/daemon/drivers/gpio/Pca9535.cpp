@@ -82,7 +82,9 @@ void Pca9535::setPinState(const size_t pin, bool asserted) {
 void Pca9535::writeReg(const Register reg, const uint8_t value) {
     int err;
 
-    PLOG_DEBUG << fmt::format("<< wr {:02x} = {:02x}", static_cast<uint8_t>(reg), value);
+    if(kLogRegWrite) {
+        PLOG_DEBUG << fmt::format("<< wr {:02x} = {:02x}", static_cast<uint8_t>(reg), value);
+    }
 
     // select slave
     err = ioctl(this->bus, I2C_SLAVE, this->busAddress);
