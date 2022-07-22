@@ -4,18 +4,6 @@
 [submodule "recipes-pl/pl-confd/files/lib/SQLiteCpp"]
 	path = recipes-pl/pl-confd/files/lib/SQLiteCpp
 	url = https://github.com/SRombauts/SQLiteCpp.git
-[submodule "recipes-pl/pl-confd/files/lib/plog"]
-	path = recipes-pl/pl-confd/files/lib/plog
-	url = https://github.com/SergiusTheBest/plog.git
-[submodule "recipes-pl/pl-pinballd/files/lib/plog"]
-	path = recipes-pl/pl-pinballd/files/lib/plog
-	url = https://github.com/SergiusTheBest/plog.git
-[submodule "recipes-pl/pl-loadd/files/lib/plog"]
-	path = recipes-pl/pl-loadd/files/lib/plog
-	url = https://github.com/SergiusTheBest/plog.git
-[submodule "recipes-pl/pl-gui/files/libs/plog"]
-	path = recipes-pl/pl-gui/files/lib/plog
-	url = https://github.com/SergiusTheBest/plog.git
 [submodule "recipes-pl/pl-gui/files/lib/shittygui"]
 	path = recipes-pl/pl-gui/files/lib/shittygui
 	url = git@github.com:tristanseifert/shittygui.cpp.git

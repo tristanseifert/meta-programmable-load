@@ -38,9 +38,9 @@ link_directories(${PKG_LIBEVENT_LIBRARY_DIRS})
 
 # Remote dependencies
 #add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/plog EXCLUDE_FROM_ALL)
 
 find_package(fmt REQUIRED)
+find_package(plog REQUIRED)
 
 ###############
 # Create version file
