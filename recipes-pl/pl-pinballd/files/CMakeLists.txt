@@ -69,6 +69,7 @@ add_executable(daemon
     src/daemon/main.cpp
     src/daemon/Probulator.cpp
     src/daemon/Watchdog.cpp
+    src/daemon/EventLoop.cpp
     src/daemon/drivers/gpio/Pca9535.cpp
     src/daemon/drivers/lcd/Nt35510.cpp
     src/daemon/drivers/touch/Ft6336.cpp

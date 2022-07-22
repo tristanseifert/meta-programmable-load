@@ -16,6 +16,7 @@
 #include <plog/Formatters/TxtFormatter.h>
 #include <plog/Init.h>
 
+#include "EventLoop.h"
 #include "Probulator.h"
 #include "Watchdog.h"
 #include "version.h"
@@ -88,6 +89,7 @@ int main(const int argc, char * const * argv) {
     plog::Severity logLevel{plog::Severity::info};
     bool logSimple{false};
 
+    std::shared_ptr<EventLoop> ev;
     std::shared_ptr<Probulator> probe;
     std::filesystem::path frontI2cBus;
 
@@ -188,7 +190,15 @@ int main(const int argc, char * const * argv) {
     InitLog(logLevel, logSimple);
     Watchdog::Init();
 
-    // set up and RPC main loop
+    // set up event loop and rpc
+    try {
+        ev = std::make_shared<EventLoop>();
+        ev->arm();
+
+    } catch(const std::exception &e) {
+        PLOG_ERROR << "Event loop setup failed: " << e.what();
+        return 1;
+    }
 
     // probe hardware and init drivers
     try {
@@ -200,7 +210,16 @@ int main(const int argc, char * const * argv) {
         return 1;
     }
 
+    // enter the main loop
+    try {
+        ev->run();
+    } catch(const std::exception &e) {
+        PLOG_ERROR << "Event loop failed: " << e.what();
+    }
+
     // clean up
     PLOG_INFO << "cleaning up";
     probe.reset();
+
+    ev.reset();
 }
