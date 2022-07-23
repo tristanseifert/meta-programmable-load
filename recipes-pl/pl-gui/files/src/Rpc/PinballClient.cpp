@@ -12,7 +12,10 @@
 #include <event2/bufferevent.h>
 #include <fmt/format.h>
 #include <plog/Log.h>
+#include <shittygui/Event.h>
+#include <shittygui/Screen.h>
 
+#include "Gui/Renderer.h"
 #include "Utils/Cbor.h"
 #include "EventLoop.h"
 #include "RpcTypes.h"
@@ -369,8 +372,19 @@ void PinballClient::processUiTouchEvent(const struct cbor_item_t *root) {
 /**
  * @brief Send a touch event to the GUI layer
  */
-void PinballClient::emitTouchEvent(const uint16_t x, const uint16_t y, const bool isDown) {
-    PLOG_VERBOSE << fmt::format("Touch event ({}, {}) {}", x, y, isDown ? "down" : "up");
+void PinballClient::emitTouchEvent(const int16_t x, const int16_t y, const bool isDown) {
+    // get the GUI instance
+    auto gui = this->gui.lock();
+    if(!gui) {
+        PLOG_WARNING << "GUI went away, can't send touch event!";
+        return;
+    }
+
+    gui->getScreen()->queueEvent(shittygui::event::Touch({x, y}, isDown));
+
+    if(kLogEvents) {
+        PLOG_VERBOSE << fmt::format("Touch event ({}, {}) {}", x, y, isDown ? "down" : "up");
+    }
 }
 
 

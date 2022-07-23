@@ -28,7 +28,7 @@ Renderer::Renderer(const std::shared_ptr<EventLoop> &ev, const std::shared_ptr<F
 
     // install a swap callback
     this->cbToken = this->fb->addSwapCallback([&](auto bufIdx) {
-        // handle animations and draw
+        this->screen->processEvents();
         this->screen->handleAnimations();
 
         if(this->screen->isDirty()) {

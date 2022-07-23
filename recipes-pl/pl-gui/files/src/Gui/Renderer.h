@@ -31,6 +31,11 @@ class Renderer {
 
         void setRootViewController(const std::shared_ptr<shittygui::ViewController> &newRoot);
 
+        /// Return a pointer to the shittygui screen
+        constexpr inline auto &getScreen() {
+            return this->screen;
+        }
+
     private:
 
     private:

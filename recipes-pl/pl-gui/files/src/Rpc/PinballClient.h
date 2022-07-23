@@ -9,6 +9,10 @@
 
 class EventLoop;
 
+namespace Gui {
+class Renderer;
+}
+
 namespace Rpc {
 /**
  * @brief Types of pinballd broadcast messages
@@ -34,7 +38,8 @@ class PinballClient {
         /**
          * @brief Enable the secretion of UI events
          */
-        inline void enableUiEvents() {
+        inline void enableUiEvents(const std::shared_ptr<Gui::Renderer> &gui) {
+            this->gui = gui;
             this->setDesiredBroadcasts(kUiBroadcastMask);
         }
         /**
@@ -42,6 +47,7 @@ class PinballClient {
          */
         inline void disableUiEvents() {
             this->setDesiredBroadcasts(PinballBroadcastType::None);
+            this->gui.reset();
         }
 
         void setDesiredBroadcasts(const PinballBroadcastType mask);
@@ -63,12 +69,15 @@ class PinballClient {
             this->emitTouchEvent(0, 0, false);
         }
         /// Emit a touch down/movement event
-        inline void emitTouchDown(const uint16_t x, const uint16_t y) {
+        inline void emitTouchDown(const int16_t x, const int16_t y) {
             this->emitTouchEvent(x, y, true);
         }
-        void emitTouchEvent(const uint16_t x, const uint16_t y, const bool isDown);
+        void emitTouchEvent(const int16_t x, const int16_t y, const bool isDown);
 
     private:
+        /// Should events be logged to the console?
+        constexpr static const bool kLogEvents{false};
+
         /// Mask of all UI broadcast types we want
         constexpr static const PinballBroadcastType kUiBroadcastMask{
             PinballBroadcastType::TouchEvent | PinballBroadcastType::ButtonEvent |
@@ -79,6 +88,8 @@ class PinballClient {
 
         /// The event loop that owns us
         std::weak_ptr<EventLoop> ev;
+        /// GUI renderer process to receive events
+        std::weak_ptr<Gui::Renderer> gui;
 
         /// Path of the RPC socket
         std::filesystem::path socketPath;
