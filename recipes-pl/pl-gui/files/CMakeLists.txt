@@ -85,12 +85,13 @@ add_executable(gui
     src/main.cpp
     src/EventLoop.cpp
     src/Framebuffer.cpp
-    src/LoaddClient.cpp
     src/Watchdog.cpp
     src/Rpc/PinballClient.cpp
+    src/Rpc/LoaddClient.cpp
     src/Gui/IconManager.cpp
     src/Gui/Renderer.cpp
     src/Gui/HomeScreen.cpp
+    src/Gui/Setup/AuxOut.cpp
 )
 
 set_target_properties(gui PROPERTIES OUTPUT_NAME load-gui)

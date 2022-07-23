@@ -1,5 +1,5 @@
-#ifndef LOADDCLIENT_H
-#define LOADDCLIENT_H
+#ifndef RPC_LOADDCLIENT_H
+#define RPC_LOADDCLIENT_H
 
 #include <cstddef>
 #include <cstdint>
@@ -12,6 +12,7 @@
 
 class EventLoop;
 
+namespace Rpc {
 class LoaddClient {
     public:
         /**
@@ -60,5 +61,6 @@ class LoaddClient {
         /// Next measurement callback token
         uint32_t nextMeasurementCallbackToken{0};
 };
+}
 
 #endif

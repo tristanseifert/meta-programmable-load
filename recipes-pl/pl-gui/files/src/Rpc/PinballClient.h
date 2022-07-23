@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <memory>
 #include <span>
+#include <utility>
 #include <vector>
 
 class EventLoop;
@@ -66,10 +67,12 @@ class PinballClient {
 
         /// Emit a touch up event
         inline void emitTouchUp() {
-            this->emitTouchEvent(0, 0, false);
+            const auto [x, y] = this->lastTouchPos;
+            this->emitTouchEvent(x, y, false);
         }
         /// Emit a touch down/movement event
         inline void emitTouchDown(const int16_t x, const int16_t y) {
+            this->lastTouchPos = {x, y};
             this->emitTouchEvent(x, y, true);
         }
         void emitTouchEvent(const int16_t x, const int16_t y, const bool isDown);
@@ -90,6 +93,9 @@ class PinballClient {
         std::weak_ptr<EventLoop> ev;
         /// GUI renderer process to receive events
         std::weak_ptr<Gui::Renderer> gui;
+
+        /// Position of the last touch event
+        std::pair<int16_t, int16_t> lastTouchPos{0, 0};
 
         /// Path of the RPC socket
         std::filesystem::path socketPath;

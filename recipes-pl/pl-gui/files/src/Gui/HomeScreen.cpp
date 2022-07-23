@@ -8,9 +8,13 @@
 #include <plog/Log.h>
 
 #include "EventLoop.h"
+
 #include "HomeScreen.h"
-#include "IconManager.h"
-#include "LoaddClient.h"
+
+#include "Gui/Setup/AuxOut.h"
+#include "Gui/IconManager.h"
+#include "Gui/Style.h"
+#include "Rpc/LoaddClient.h"
 
 #include <shittygui/Screen.h>
 #include <shittygui/Widgets/Button.h>
@@ -23,7 +27,7 @@ using namespace Gui;
 /**
  * @brief Initialize the home screen
  */
-HomeScreen::HomeScreen(const std::shared_ptr<LoaddClient> &loaddRpc) : loaddRpc(loaddRpc) {
+HomeScreen::HomeScreen(const std::shared_ptr<Rpc::LoaddClient> &loaddRpc) : loaddRpc(loaddRpc) {
     // create the container
     auto cont = shittygui::MakeWidget<shittygui::widgets::Container>({0, 0}, {800, 480});
     cont->setDrawsBorder(false);
@@ -91,24 +95,24 @@ void HomeScreen::initActualValueBox(const std::shared_ptr<shittygui::widgets::Co
 
     // current
     this->actualCurrentLabel = MakeMeasureLabel(box, kActualCurrentColor,
-            shittygui::Point(5, (kYSpacing * 0)), "A", kUnitWidth);
+            shittygui::Point(5, (kYSpacing * 0) + 2), "A", kUnitWidth);
     this->actualCurrentLabel->setBackgroundColor({0, 0, 0, 1});
     this->actualCurrentLabel->setContent("<span font_features='tnum'>0.000</span>", true);
 
     // voltage
     this->actualVoltageLabel = MakeMeasureLabel(box, kActualVoltageColor,
-            shittygui::Point(5, (kYSpacing * 1)), "V", kUnitWidth);
+            shittygui::Point(5, (kYSpacing * 1) + 2), "V", kUnitWidth);
     this->actualVoltageLabel->setBackgroundColor({0, 0, 0, 1});
     this->actualVoltageLabel->setContent("<span font_features='tnum'>0.00</span>", true);
 
     // voltage
     this->actualWattageLabel = MakeMeasureLabel(box, kActualWattageColor,
-            shittygui::Point(5, (kYSpacing * 2)), "W", kUnitWidth);
+            shittygui::Point(5, (kYSpacing * 2) + 2), "W", kUnitWidth);
     this->actualWattageLabel->setBackgroundColor({0, 0, 0, 1});
     this->actualWattageLabel->setContent("<span font_features='tnum'>0.00</span>", true);
 
     // inside temperature
-    this->actualTempLabel = MakeMeasureLabel(box, kActualTempColor, {5, 260}, "°C", kUnitWidth);
+    this->actualTempLabel = MakeMeasureLabel(box, kActualTempColor, {5, 262}, "°C", kUnitWidth);
     this->actualTempLabel->setBackgroundColor({0, 0, 0, 1});
     this->actualTempLabel->setContent("<span font_features='tnum'>0.0</span>", true);
 }
@@ -182,6 +186,10 @@ void HomeScreen::initActionsBox(const std::shared_ptr<shittygui::widgets::Contai
     auto auxOutSetup = shittygui::MakeWidget<shittygui::widgets::Button>({5, 205}, {90, 90},
             shittygui::widgets::Button::Type::Push, "Aux Out Config");
     auxOutSetup->setFont(kActionFont, kActionFontSize);
+    auxOutSetup->setPushCallback([this](auto whomst) {
+        auto auxCfg = std::make_shared<Setup::AuxOut>(this->loaddRpc);
+        this->presentViewController(auxCfg, true);
+    });
 
     box->addChild(auxOutSetup);
 

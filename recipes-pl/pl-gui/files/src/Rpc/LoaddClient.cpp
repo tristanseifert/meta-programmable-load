@@ -20,6 +20,8 @@
 #include "LoaddClient.h"
 #include "RpcTypes.h"
 
+using namespace Rpc;
+
 /**
  * @brief RPC message endpoints
  */

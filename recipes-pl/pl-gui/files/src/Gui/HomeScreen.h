@@ -17,7 +17,9 @@ class Label;
 }
 }
 
+namespace Rpc {
 class LoaddClient;
+}
 
 namespace Gui {
 /**
@@ -28,7 +30,7 @@ namespace Gui {
  */
 class HomeScreen: public shittygui::ViewController {
     public:
-        HomeScreen(const std::shared_ptr<LoaddClient> &rpc);
+        HomeScreen(const std::shared_ptr<Rpc::LoaddClient> &rpc);
         ~HomeScreen();
 
         /**
@@ -120,7 +122,7 @@ class HomeScreen: public shittygui::ViewController {
 
     private:
         /// Reference to the loadd RPC
-        std::weak_ptr<LoaddClient> loaddRpc;
+        std::weak_ptr<Rpc::LoaddClient> loaddRpc;
         /// Measurement update callback token
         uint32_t measurementCallbackToken{0};
 

@@ -16,13 +16,13 @@
 
 #include "EventLoop.h"
 #include "Framebuffer.h"
-#include "LoaddClient.h"
 #include "Watchdog.h"
 #include "version.h"
 #include "Gui/IconManager.h"
 #include "Gui/Renderer.h"
 #include "Gui/HomeScreen.h"
 #include "Rpc/PinballClient.h"
+#include "Rpc/LoaddClient.h"
 
 /// Whether the UI task shall continue running
 std::atomic_bool gRun{true};
@@ -94,7 +94,7 @@ static void InitLibevent() {
  */
 int main(const int argc, char * const * argv) {
     std::shared_ptr<EventLoop> ev;
-    std::shared_ptr<LoaddClient> rpc;
+    std::shared_ptr<Rpc::LoaddClient> rpc;
     std::shared_ptr<Rpc::PinballClient> pinballRpc;
 
     std::shared_ptr<Framebuffer> fb;
@@ -197,7 +197,7 @@ int main(const int argc, char * const * argv) {
     PLOG_DEBUG << "initializing rpc";
 
     try {
-        rpc = std::make_shared<LoaddClient>(ev, loaddSocketPath);
+        rpc = std::make_shared<Rpc::LoaddClient>(ev, loaddSocketPath);
         pinballRpc = std::make_shared<Rpc::PinballClient>(ev, pinballdSocketPath);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up loadd rpc: " << e.what();
