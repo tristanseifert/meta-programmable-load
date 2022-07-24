@@ -29,6 +29,21 @@ namespace Gui::Setup {
  * selected into a voltage) and a customizable update rate.
  */
 class AuxOut: public shittygui::ViewController {
+    private:
+        /// Tag values for the output type selection
+        enum OutputTag: uintptr_t {
+            Current                     = 1,
+            Voltage                     = 2,
+            Wattage                     = 3,
+            Trigger                     = 4,
+        };
+        /// Tag values for sample rate selection
+        enum SampleRateTag: uintptr_t {
+            Low                         = 0x10,
+            Medium                      = 0x11,
+            High                        = 0x12,
+        };
+
     public:
         AuxOut(const std::weak_ptr<Rpc::LoaddClient> &rpc);
         ~AuxOut() = default;

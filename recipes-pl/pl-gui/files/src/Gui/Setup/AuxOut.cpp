@@ -1,9 +1,12 @@
+#include <array>
+
 #include <plog/Log.h>
 
 #include <shittygui/Widgets/Button.h>
 #include <shittygui/Widgets/Container.h>
 #include <shittygui/Widgets/Checkbox.h>
 #include <shittygui/Widgets/Label.h>
+#include <shittygui/Widgets/RadioButton.h>
 
 #include "Gui/CommonControls.h"
 #include "Gui/Style.h"
@@ -46,7 +49,7 @@ AuxOut::AuxOut(const std::weak_ptr<Rpc::LoaddClient> &rpc) : loaddRpc(rpc) {
 void AuxOut::initEnableSection() {
     // create checkbox
     this->enableCheck = shittygui::MakeWidget<shittygui::widgets::Checkbox>({20, 80},
-            Style::Checkbox::kSize, true);
+            {600, Style::Checkbox::kSize}, true, "Enable Auxiliary Output");
     DefaultStyle::Apply(this->enableCheck);
     this->enableCheck->setPushCallback([this](auto whomst) {
         this->configContainer->setHidden(!this->enableCheck->isChecked());
@@ -54,29 +57,92 @@ void AuxOut::initEnableSection() {
     });
 
     this->root->addChild(this->enableCheck);
-
-    // create the adjacent label
-    auto checkLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
-            shittygui::Point(90, 80), shittygui::Size(400, Style::Checkbox::kSize.height),
-            "Enable Aux Analog Output");
-    checkLabel->setFont("Liberation Sans", 23);
-    checkLabel->setTextColor({1, 1, 1}); // TODO: lmao
-    checkLabel->setTextAlign(shittygui::TextAlign::Left, shittygui::VerticalAlign::Middle);
-
-    this->root->addChild(checkLabel);
 }
 
 /**
  * @brief Initialize the output value selection
  */
 void AuxOut::initMeasurementSelection() {
-    // TODO: placeholder
-    auto checkLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
-            shittygui::Point(10, 160-20), shittygui::Size(780, 40),
-            "Placeholder area for content");
-    checkLabel->setFont("Liberation Sans", 24);
-    checkLabel->setTextColor({1, 1, 1}); // TODO: lmao
-    checkLabel->setTextAlign(shittygui::TextAlign::Center, shittygui::VerticalAlign::Middle);
+    using namespace std::placeholders;
 
-    this->configContainer->addChild(checkLabel);
+    // label for the type
+    auto outputLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
+            shittygui::Point(10, 10), shittygui::Size(350, 30),
+            "Measurement to Output:");
+    outputLabel->setFont("Liberation Sans Medium", 23);
+    outputLabel->setTextColor({1, 1, 1}); // TODO: lmao
+    outputLabel->setTextAlign(shittygui::TextAlign::Left, shittygui::VerticalAlign::Middle);
+
+    this->configContainer->addChild(outputLabel);
+
+    // value to output
+    std::array<shittygui::widgets::RadioButton::GroupEntry, 4> outputOptions{{
+        {
+            .rect = {{0, 0}, {240, Style::RadioButton::kSize}},
+            .label = "Current",
+            .tag = OutputTag::Current,
+        },
+        {
+            .rect = {{260, 0}, {240, Style::RadioButton::kSize}},
+            .label = "Voltage",
+            .tag = OutputTag::Voltage,
+        },
+        {
+            .rect = {{520, 0}, {240, Style::RadioButton::kSize}},
+            .label = "Wattage",
+            .tag = OutputTag::Wattage,
+        },
+        {
+            .rect = {{0, 65}, {240, Style::RadioButton::kSize}},
+            .label = "Trigger",
+            .tag = OutputTag::Trigger,
+        },
+    }};
+    auto radioGroup = shittygui::widgets::RadioButton::MakeRadioGroup(outputOptions,
+        [](auto &whomst, const auto tag) {
+        PLOG_VERBOSE << "Aux out type: " << tag;
+    }, [](auto radio) {
+        DefaultStyle::Apply(radio);
+    });
+
+    radioGroup->setFrameOrigin({10, 52});
+    this->configContainer->addChild(radioGroup);
+
+    // label for sample rate
+    auto sampleLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
+            shittygui::Point(10, 218), shittygui::Size(350, 30),
+            "Sample Rate:");
+    sampleLabel->setFont("Liberation Sans Medium", 23);
+    sampleLabel->setTextColor({1, 1, 1}); // TODO: lmao
+    sampleLabel->setTextAlign(shittygui::TextAlign::Left, shittygui::VerticalAlign::Middle);
+
+    this->configContainer->addChild(sampleLabel);
+
+    // sample rate
+    std::array<shittygui::widgets::RadioButton::GroupEntry, 3> sampleOptions{{
+        {
+            .rect = {{0, 0}, {240, Style::RadioButton::kSize}},
+            .label = "Low (50Hz)",
+            .tag = SampleRateTag::Low,
+        },
+        {
+            .rect = {{260, 0}, {240, Style::RadioButton::kSize}},
+            .label = "Med (150Hz)",
+            .tag = SampleRateTag::Medium,
+        },
+        {
+            .rect = {{520, 0}, {240, Style::RadioButton::kSize}},
+            .label = "High (500Hz)",
+            .tag = SampleRateTag::High,
+        },
+    }};
+    auto sampleGroup = shittygui::widgets::RadioButton::MakeRadioGroup(sampleOptions,
+        [](auto &whomst, const auto tag) {
+        PLOG_VERBOSE << "Sample rate tag: " << tag;
+    }, [](auto radio) {
+        DefaultStyle::Apply(radio);
+    });
+
+    sampleGroup->setFrameOrigin({10, 255});
+    this->configContainer->addChild(sampleGroup);
 }

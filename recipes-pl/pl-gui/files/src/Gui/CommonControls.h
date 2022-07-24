@@ -35,10 +35,12 @@ struct CommonControls {
         container->setBackgroundColor({0, 0, 0});
 
         // add the button
-        const auto buttonHeight = static_cast<uint16_t>(frame.size.height - 4);
-        auto closeBtn = shittygui::MakeWidget<shittygui::widgets::Button>({5, 2},
-                {90, buttonHeight}, shittygui::widgets::Button::Type::Push, "Close");
+        auto closeBtn = shittygui::MakeWidget<shittygui::widgets::Button>({0, 0},
+                shittygui::Size(100, frame.size.height - 1),
+                shittygui::widgets::Button::Type::Push, "Close");
         DefaultStyle::Apply(closeBtn);
+        closeBtn->setBorderWidth(0.);
+        closeBtn->setBorderRadius(0.);
         closeBtn->setFont(kTopBarCloseFont, kTopBarCloseFontSize);
         closeBtn->setPushCallback([vc](auto whomst) {
             vc->dismiss(true);
@@ -48,8 +50,8 @@ struct CommonControls {
 
         // add the label
         auto label = shittygui::MakeWidget<shittygui::widgets::Label>(
-                shittygui::Point(8 + 90, 0),
-                shittygui::Size(frame.size.width - (10 + 90), frame.size.height - 1));
+                shittygui::Point(105, 0),
+                shittygui::Size(frame.size.width - (105 + 5), frame.size.height - 1));
         label->setFont(kTopBarFont, kTopBarFontSize);
         label->setTextAlign(shittygui::TextAlign::Center, shittygui::VerticalAlign::Middle);
         label->setTextColor(kTopBarTextColor);
@@ -63,6 +65,13 @@ struct CommonControls {
         container->addChild(label);
 
         // add bottom horizontal line
+        auto hr = shittygui::MakeWidget<shittygui::widgets::Container>(
+                shittygui::Point(0, frame.size.height - 1), shittygui::Size(frame.size.width, 1));
+        hr->setDrawsBorder(false);
+        hr->setBorderRadius(0.);
+        hr->setBackgroundColor({.33, .33, .33});
+
+        container->addChild(hr);
 
         // done
         root->addChild(container);
@@ -70,17 +79,17 @@ struct CommonControls {
 
     private:
         /// Height of the top nav bar
-        constexpr static const size_t kTopBarHeight{56};
+        constexpr static const size_t kTopBarHeight{64};
         /// Text color for the top bar title
         constexpr static const shittygui::Color kTopBarTextColor{1, 1, 1};
         /// Font for the top nav bar
-        constexpr static const std::string_view kTopBarFont{"DINish Expanded"};
+        constexpr static const std::string_view kTopBarFont{"DINish Expanded Semibold"};
         /// Font size of the top nav bar
-        constexpr static const size_t kTopBarFontSize{34};
+        constexpr static const size_t kTopBarFontSize{35};
         /// Font for the top close button
         constexpr static const std::string_view kTopBarCloseFont{"DINish Condensed"};
         /// Font size for the top close button
-        constexpr static const size_t kTopBarCloseFontSize{22};
+        constexpr static const size_t kTopBarCloseFontSize{24};
 };
 }
 
