@@ -110,7 +110,7 @@ void AuxOut::initMeasurementSelection() {
 
     // label for sample rate
     auto sampleLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
-            shittygui::Point(10, 218), shittygui::Size(350, 30),
+            shittygui::Point(10, 213), shittygui::Size(350, 30),
             "Sample Rate:");
     sampleLabel->setFont("Liberation Sans Medium", 23);
     sampleLabel->setTextColor({1, 1, 1}); // TODO: lmao
