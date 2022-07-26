@@ -15,6 +15,7 @@ PrivateTmp=true
 PermissionsStartOnly=true
 ExecStartPre=-/bin/mkdir /var/run/confd
 ExecStartPre=/bin/chown -R confd:load /var/run/confd/
+ExecStartPre=/bin/chmod -R 0775 /var/run/confd/
 
 [Install]
 WantedBy=local-fs.target

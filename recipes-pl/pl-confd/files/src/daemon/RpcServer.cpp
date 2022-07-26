@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <cbor.h>
 #include <event2/event.h>
@@ -71,6 +72,12 @@ void RpcServer::initSocket() {
     err = fcntl(this->listenSock, F_SETFL, err | O_NONBLOCK);
     if(err == -1) {
         throw std::system_error(errno, std::generic_category(), "set rpc socket flags");
+    }
+
+    // set the permission of the socket to allow all to connect
+    err = fchmod(this->listenSock, 0777);
+    if(err == -1) {
+        throw std::system_error(errno, std::generic_category(), "set rpc socket permissions");
     }
 
     // allow clients to connect

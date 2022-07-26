@@ -1,0 +1,22 @@
+[Unit]
+Description=User interface daemon
+After=local-fs.target sysinit.target systemd-udevd.service
+Wants=confd.service
+
+[Service]
+ExecStart=/usr/sbin/pinballd --socket=/var/run/pinballd/rpc.sock --log-simple --front-i2c-bus=2
+Type=notify
+WatchdogSec=10
+Restart=on-failure
+RestartSec=5
+User=pinballd
+Group=load
+PrivateTmp=true
+
+# create the socket directory (as root)
+PermissionsStartOnly=true
+ExecStartPre=-/bin/mkdir /var/run/pinballd
+ExecStartPre=/bin/chown -R pinballd:load /var/run/pinballd/
+
+[Install]
+WantedBy=basic.target

@@ -1,0 +1,9 @@
+# allow pinballd user to access front panel I2C, SPI busses
+KERNEL=="i2c-2", OWNER="pinballd", GROUP="load", MODE="0600"
+KERNEL=="spidev0.1", OWNER="pinballd", GROUP="load", MODE="0600"
+
+# IO port C (for display reset line)
+KERNEL=="gpiochip2", OWNER="pinballd", GROUP="load", MODE="0600"
+
+# also, allow it to access the input events device
+KERNEL=="event*", NAME="input/%k", OWNER="pinballd", GROUP="load", MODE:="0600"

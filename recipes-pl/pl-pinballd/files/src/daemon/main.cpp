@@ -211,6 +211,8 @@ int main(const int argc, char * const * argv) {
 
     // enter the main loop
     try {
+        Watchdog::Start();
+
         while(gRun) {
             ev->run();
         }
@@ -219,6 +221,8 @@ int main(const int argc, char * const * argv) {
     }
 
     // clean up
+    Watchdog::Stop();
+
     PLOG_INFO << "cleaning up";
     probe.reset();
 
