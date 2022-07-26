@@ -266,7 +266,7 @@ void Probulator::parseIdpromPayload(std::span<const std::byte> payload) {
                 driverInfo.constructor(this, driverId, driverPair.value);
             } catch(const std::exception &e) {
                 PLOG_ERROR << "failed to init driver " << driverInfo.name << ": " << e.what();
-                throw;
+                throw std::runtime_error("driver initialization failed");
             }
         }
     }

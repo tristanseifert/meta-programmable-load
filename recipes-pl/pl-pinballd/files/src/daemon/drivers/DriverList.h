@@ -13,8 +13,12 @@
 
 #include "drivers/gpio/Pca9535.h"
 #include "drivers/lcd/Nt35510.h"
+#include "drivers/led/Pca9955.h"
 
 class Probulator;
+
+/// XXX: this is the IO expander used on the rev 3 front panel
+static std::shared_ptr<Drivers::Gpio::Pca9535> gFrontIoExpander;
 
 /**
  * @brief Driver information structure
@@ -50,7 +54,7 @@ struct DriverInfo {
  *
  * This contains information on all drivers supported.
  */
-static const std::array<DriverInfo, 2> gSupportedDrivers{{
+static const std::array<DriverInfo, 3> gSupportedDrivers{{
     // FT3663 touch controller
     {
         .id = drivers::touch::Ft6336::kDriverId,
@@ -71,9 +75,33 @@ static const std::array<DriverInfo, 2> gSupportedDrivers{{
         .id = uuids::uuid{{0x08, 0x81, 0xBD, 0xAD, 0x2F, 0xD4, 0x45, 0xB0, 0x84, 0x36, 0x36, 0xDB, 0x75, 0x36, 0xA1, 0x9E}},
         .name = "NT35510 Display Controller",
         .constructor = [](auto probulator, auto id, auto args) {
-            auto expander = std::make_shared<Drivers::Gpio::Pca9535>(probulator->getBusFd(), 0x20);
-            Drivers::Lcd::Nt35510("/dev/spidev0.1", expander, 8);
+            if(!gFrontIoExpander) {
+                gFrontIoExpander = std::make_shared<Drivers::Gpio::Pca9535>(probulator->getBusFd(), 0x20);
+            }
+
+            Drivers::Lcd::Nt35510("/dev/spidev0.1", gFrontIoExpander, 8);
         }
+    },
+
+    /**
+     * @brief Front panel indicator/button driver (PCA9955B direct control)
+     *
+     * Implements a driver for the PCA9955B 16-channel LED driver chip. It's connected to various
+     * LED indicators and buttons on the front panel.
+     */
+    {
+        .id = drivers::led::Pca9955::kDriverId,
+        .name = "PCA9955B 16-channel LED Driver",
+        .constructor = [](auto probulator, auto id, auto args) {
+            // XXX: only necessary for rev 3 hardware
+            // set LED_OE = 0
+            gFrontIoExpander->configurePin(7, Drivers::Gpio::Pca9535::PinMode::Output);
+            gFrontIoExpander->setPinState(7, false);
+
+            // create the driver
+            auto driver = std::make_shared<drivers::led::Pca9955>(probulator->getBusFd(), args);
+            probulator->registerDriver(driver);
+        },
     },
 }};
 

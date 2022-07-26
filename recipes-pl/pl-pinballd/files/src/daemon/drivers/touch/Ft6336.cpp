@@ -44,12 +44,6 @@ Ft6336::Ft6336(const int busFd, const cbor_item_t *config) : busFd(busFd) {
     PLOG_DEBUG << fmt::format("Touch array size: {}x{} (rotation {})", this->size.first,
             this->size.second, static_cast<const uint8_t>(this->rotation));
 
-    if(!this->address) {
-        throw std::runtime_error("failed to get device address");
-    } else if(this->rotation && (!this->size.first || !this->size.second)) {
-        throw std::runtime_error("rotation specified without size");
-    }
-
     // read the device version
     this->firmwareVersion = this->readRegister(Register::FirmwareVersion);
     const auto manufacturer = this->readRegister(Register::ManufacturerID);
@@ -80,59 +74,48 @@ Ft6336::Ft6336(const int busFd, const cbor_item_t *config) : busFd(busFd) {
  *       being output.
  */
 void Ft6336::readConfig(const cbor_item_t *inConfig) {
-    auto entries = cbor_map_handle(inConfig);
-    const auto numEntries = cbor_map_size(inConfig);
+    // get address
+    if(auto addr = Util::CborMapGet(inConfig, "addr")) {
+        this->address = Util::CborReadUint(addr);
+    } else {
+        throw std::runtime_error("missing or invalid address key");
+    }
 
-    for(size_t i = 0; i < numEntries; i++) {
-        auto &pair = entries[i];
+    // interrupt config
+    if(auto irq = Util::CborMapGet(inConfig, "irq")) {
+        // boolean flag?
+        if(cbor_float_ctrl_is_ctrl(irq)) {
+            this->irqEnabled = cbor_get_bool(irq);
+        }
+        else {
+            // TODO: implement irq support
+            throw std::runtime_error("interrupt support not yet implemented");
+        }
+    }
 
-        // keys should be string
-        if(!cbor_isa_string(pair.key) || !cbor_string_is_definite(pair.key)) {
-            throw std::runtime_error("invalid key (expected definite string)");
+    // panel size
+    if(auto size = Util::CborMapGet(inConfig, "size")) {
+        if(!cbor_isa_array(size) || cbor_array_is_indefinite(size)) {
+            throw std::runtime_error("invalid size (expected definite array)");
+        } else if(cbor_array_size(size) != 2) {
+            throw std::runtime_error(fmt::format("invalid size array (got {} elements)",
+                        cbor_array_size(size)));
         }
 
-        const auto keyStr = reinterpret_cast<const char *>(cbor_string_handle(pair.key));
-        const auto keyStrLen = cbor_string_length(pair.key);
+        const uint16_t w = Util::CborReadUint(cbor_array_get(size, 0)),
+              h = Util::CborReadUint(cbor_array_get(size, 1));
+        this->size = {w, h};
+    } else {
+        throw std::runtime_error("missing panel size");
+    }
 
-        // process keys
-        if(!strncmp("addr", keyStr, keyStrLen)) {
-            if(!cbor_isa_uint(pair.value)) {
-                throw std::runtime_error("invalid address (expected uint)");
-            }
+    // rotation
+    if(auto rot = Util::CborMapGet(inConfig, "rotation")) {
+        if(!cbor_isa_uint(rot)) {
+            throw std::runtime_error("invalid rotation key (expected uint)");
+        }
 
-            this->address = Util::CborReadUint(pair.value);
-        }
-        else if(!strncmp("irq", keyStr, keyStrLen)) {
-            // boolean flag?
-            if(cbor_float_ctrl_is_ctrl(pair.value)) {
-                this->irqEnabled = cbor_get_bool(pair.value);
-            }
-            else {
-                // TODO: implement irq support
-                throw std::runtime_error("interrupt support not yet implemented");
-            }
-        }
-        else if(!strncmp("size", keyStr, keyStrLen)) {
-            if(!cbor_isa_array(pair.value) || cbor_array_is_indefinite(pair.value)) {
-                throw std::runtime_error("invalid size (expected definite array)");
-            } else if(cbor_array_size(pair.value) != 2) {
-                throw std::runtime_error(fmt::format("invalid size array (got {} elements)",
-                            cbor_array_size(pair.value)));
-            }
-
-            const uint16_t w = Util::CborReadUint(cbor_array_get(pair.value, 0)),
-                  h = Util::CborReadUint(cbor_array_get(pair.value, 1));
-            this->size = {w, h};
-        }
-        else if(!strncmp("rotation", keyStr, keyStrLen)) {
-            if(!cbor_isa_uint(pair.value)) {
-                throw std::runtime_error("invalid rotation key (expected uint)");
-            }
-
-            this->rotation = ((Util::CborReadUint(pair.value) % 360) / 90) & 0x03;
-        } else {
-            throw std::runtime_error(fmt::format("unknown config key '{}'", keyStr));
-        }
+        this->rotation = ((Util::CborReadUint(rot) % 360) / 90) & 0x03;
     }
 }
 

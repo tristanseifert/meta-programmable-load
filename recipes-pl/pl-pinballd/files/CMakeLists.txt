@@ -74,6 +74,7 @@ add_executable(daemon
     src/daemon/Rpc/Client.cpp
     src/daemon/drivers/gpio/Pca9535.cpp
     src/daemon/drivers/lcd/Nt35510.cpp
+    src/daemon/drivers/led/Pca9955.cpp
     src/daemon/drivers/touch/Ft6336.cpp
     ${VERSION_FILE}
 )
