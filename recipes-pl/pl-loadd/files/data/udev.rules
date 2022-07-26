@@ -1,0 +1,14 @@
+# allow loadd access to remoteproc endpoints
+SUBSYSTEM=="remoteproc", ACTION=="add", \
+        RUN+="/bin/chown -R loadd '/sys/module/firmware_class/parameters/path'", \
+        RUN+="/bin/chgrp -R load '/sys/module/firmware_class/parameters/path'", \
+        RUN+="/bin/chgrp -R load '/sys%p'", \
+        RUN+="/bin/chown -R loadd '/sys%p'", \
+        RUN+="/bin/mkdir -p /dev/remoteproc", \
+        RUN+="/bin/ln -sT '/sys/class/remoteproc/%k' /dev/remoteproc/m4"
+
+# RUN+="/bin/chmod -R g=u '/sys%p'", \
+
+# allow loadd access to rpmsg endpoints
+KERNEL=="rpmsg_ctrl*", OWNER="loadd", GROUP="load", MODE="0600"
+KERNEL=="rpmsg*", OWNER="loadd", GROUP="load", MODE="0600"

@@ -175,7 +175,7 @@ class Coprocessor {
         /// Path of the "firmware base path" sysfs variable
         constexpr static const std::string_view kFirmwareSysfsBase{"/sys/module/firmware_class/parameters/"};
         /// Remoteproc base path
-        constexpr static const std::string_view kRprocSysfsBase{"/sys/class/remoteproc/remoteproc0/"};
+        constexpr static const std::string_view kRprocSysfsBase{"/dev/remoteproc/m4/"};
 
         /// rpmsg control device file
         constexpr static const std::string_view kRpmsgCtrlDev{"/dev/rpmsg_ctrl0"};

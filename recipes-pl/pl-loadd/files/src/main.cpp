@@ -111,6 +111,8 @@ int main(const int argc, char * const * argv) {
 
     // perform initialization
     InitLog(logLevel, logSimple);
+
+    Watchdog::Init();
     Watchdog::Start();
 
     try {
@@ -148,6 +150,8 @@ int main(const int argc, char * const * argv) {
 
     // perform cleanup
     PLOG_INFO << "shutting down...";
+
+    Watchdog::Stop();
 
     try {
         // shut down the coprocessor
