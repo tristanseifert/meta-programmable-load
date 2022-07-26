@@ -89,7 +89,7 @@ void EventLoop::initWatchdogEvent() {
     }
 
     // get interval
-    const auto usec = Watchdog::GetInterval().count();
+    const auto usec = Watchdog::GetInterval().count() / 2;
 
     // create and add event
     this->watchdogEvent = event_new(this->evbase, -1, EV_PERSIST, [](auto, auto, auto ctx) {
