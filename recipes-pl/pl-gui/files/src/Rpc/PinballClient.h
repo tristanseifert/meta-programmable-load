@@ -5,7 +5,9 @@
 #include <filesystem>
 #include <memory>
 #include <span>
+#include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 class EventLoop;
@@ -32,6 +34,37 @@ enum PinballBroadcastType: uintptr_t {
  */
 class PinballClient {
     public:
+        /// Available indicators on the front panel
+        enum class Indicator {
+            /// RGB status LED
+            Status,
+            /// Dual color trigger indicator
+            Trigger,
+            /// Single color overheat indicator
+            Overheat,
+            /// Single color overcurrent indicator
+            Overcurrent,
+            /// Single color error indicator
+            Error,
+
+            /// Single color mode button (CC)
+            BtnModeCc,
+            /// Single color mode button (CV)
+            BtnModeCv,
+            /// Single color mode button (CW)
+            BtnModeCw,
+            /// Single color mode button (bonus)
+            BtnModeExt,
+            /// Dual color "Load on" button
+            BtnLoadOn,
+            /// Menu button
+            BtnMenu,
+        };
+        using IndicatorColor = std::tuple<double, double, double>;
+        using IndicatorValue = std::variant<bool, double, IndicatorColor>;
+        using IndicatorChange = std::pair<Indicator, IndicatorValue>;
+
+    public:
         PinballClient(const std::shared_ptr<EventLoop> &ev,
                 const std::filesystem::path &socketPath);
         ~PinballClient();
@@ -52,6 +85,20 @@ class PinballClient {
         }
 
         void setDesiredBroadcasts(const PinballBroadcastType mask);
+
+        /**
+         * @brief Update the state of a single indicator
+         *
+         * This is a shortcut for the bulk indicator update method. You should prefer to use the
+         * bulk updates if setting more than one indicator.
+         */
+        inline void setIndicatorState(const IndicatorChange &change) {
+            std::array<IndicatorChange, 1> temp{{
+                change
+            }};
+            return this->setIndicatorState(temp);
+        }
+        void setIndicatorState(std::span<const IndicatorChange> changes);
 
     private:
         int connectSocket();

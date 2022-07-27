@@ -110,7 +110,7 @@ void AuxOut::initMeasurementSelection() {
 
     // label for sample rate
     auto sampleLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
-            shittygui::Point(10, 213), shittygui::Size(350, 30),
+            shittygui::Point(10, 200), shittygui::Size(350, 30),
             "Sample Rate:");
     sampleLabel->setFont("Liberation Sans Medium", 23);
     sampleLabel->setTextColor({1, 1, 1}); // TODO: lmao
@@ -143,6 +143,22 @@ void AuxOut::initMeasurementSelection() {
         DefaultStyle::Apply(radio);
     });
 
-    sampleGroup->setFrameOrigin({10, 255});
+    sampleGroup->setFrameOrigin({10, 242});
     this->configContainer->addChild(sampleGroup);
+}
+
+/**
+ * @brief Fetch from the remote the remote state
+ */
+void AuxOut::getRemoteState() {
+    // TODO: implement
+}
+
+/**
+ * @brief Send a message to the remote to update its output state
+ *
+ * This will apply the same configuration as was specified in the UI.
+ */
+void AuxOut::updateRemoteState() {
+    // TODO: yeet
 }

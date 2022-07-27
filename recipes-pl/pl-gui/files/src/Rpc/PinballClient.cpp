@@ -4,7 +4,10 @@
 
 #include <cerrno>
 #include <string>
+#include <string_view>
 #include <system_error>
+#include <type_traits>
+#include <unordered_map>
 
 #include <cbor.h>
 #include <event2/event.h>
@@ -30,6 +33,7 @@ enum rpc_endpoint {
     kRpcEndpointNoOp                    = 0x00,
     kRpcEndpointBroadcastConfig         = 0x01,
     kRpcEndpointUiEvent                 = 0x02,
+    kRpcEndpointIndicator               = 0x03,
 };
 
 /**
@@ -104,7 +108,7 @@ int PinballClient::connectSocket() {
     int fd, err;
 
     // create the socket
-    fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    fd = ::socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if(fd == -1) {
         throw std::system_error(errno, std::generic_category(), "create pinballd socket");
     }
@@ -420,6 +424,83 @@ void PinballClient::setDesiredBroadcasts(const PinballBroadcastType mask) {
 
     try {
         this->sendPacket(kRpcEndpointBroadcastConfig,
+                {reinterpret_cast<std::byte *>(rootBuf), serializedBytes});
+        free(rootBuf);
+    } catch(const std::exception &e) {
+        free(rootBuf);
+        throw;
+    }
+}
+
+/**
+ * @brief Update the state of one or more indicators
+ *
+ * @param changes Block of memory containing one or more indicator change requests
+ */
+void PinballClient::setIndicatorState(std::span<const IndicatorChange> changes) {
+    // mapping of indicator -> key name
+    static const std::unordered_map<Indicator, std::string_view> kIndicatorNames{{
+        {Indicator::Status,             "status"},
+        {Indicator::Trigger,            "trigger"},
+        {Indicator::Overheat,           "overheat"},
+        {Indicator::Overcurrent,        "overcurrent"},
+        {Indicator::Error,              "error"},
+        {Indicator::BtnModeCc,          "modeCc"},
+        {Indicator::BtnModeCv,          "modeCv"},
+        {Indicator::BtnModeCw,          "modeCw"},
+        {Indicator::BtnModeExt,         "modeExt"},
+        {Indicator::BtnLoadOn,          "loadOn"},
+        {Indicator::BtnMenu,            "menu"},
+    }};
+
+    // validate args
+    if(changes.empty()) {
+        // honestly, what kind of idiot would make this call?
+        return;
+    }
+
+    // set up the encoder
+    auto root = cbor_new_definite_map(changes.size());
+
+    // encode each change
+    for(const auto &change : changes) {
+        const auto &[indicator, value] = change;
+
+        // create the payload for this key based on the value
+        auto payload = std::visit([&](auto&& arg) -> cbor_item_t * {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr(std::is_same_v<T, double>) {
+                return cbor_build_float8(arg);
+            }
+            else if constexpr(std::is_same_v<T, IndicatorColor>) {
+                const auto [cR, cG, cB] = arg;
+
+                auto array = cbor_new_definite_array(3);
+                cbor_array_push(array, cbor_build_float4(cR));
+                cbor_array_push(array, cbor_build_float4(cG));
+                cbor_array_push(array, cbor_build_float4(cB));
+                return array;
+            }
+            else if constexpr(std::is_same_v<T, bool>) {
+                return cbor_build_bool(arg);
+            }
+        }, value);
+
+        // add it to the map
+        cbor_map_add(root, (struct cbor_pair) {
+            .key = cbor_move(cbor_build_string(kIndicatorNames.at(indicator).data())),
+            .value = cbor_move(payload)
+        });
+    }
+
+    // send the packet
+    size_t rootBufLen;
+    unsigned char *rootBuf{nullptr};
+    const size_t serializedBytes = cbor_serialize_alloc(root, &rootBuf, &rootBufLen);
+    cbor_decref(&root);
+
+    try {
+        this->sendPacket(kRpcEndpointIndicator,
                 {reinterpret_cast<std::byte *>(rootBuf), serializedBytes});
         free(rootBuf);
     } catch(const std::exception &e) {

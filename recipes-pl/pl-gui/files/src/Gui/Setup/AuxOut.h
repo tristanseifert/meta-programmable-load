@@ -32,16 +32,16 @@ class AuxOut: public shittygui::ViewController {
     private:
         /// Tag values for the output type selection
         enum OutputTag: uintptr_t {
-            Current                     = 1,
-            Voltage                     = 2,
-            Wattage                     = 3,
-            Trigger                     = 4,
+            Current                     = 0x01 << 0,
+            Voltage                     = 0x02 << 0,
+            Wattage                     = 0x03 << 0,
+            Trigger                     = 0x04 << 0,
         };
         /// Tag values for sample rate selection
         enum SampleRateTag: uintptr_t {
-            Low                         = 0x10,
-            Medium                      = 0x11,
-            High                        = 0x12,
+            Low                         = 0x1 << 4,
+            Medium                      = 0x2 << 4,
+            High                        = 0x3 << 4,
         };
 
     public:
@@ -63,10 +63,11 @@ class AuxOut: public shittygui::ViewController {
         }
 
         /**
-         * @brief
+         * @brief Update the current configuration state
          */
         void viewWillAppear(const bool isAnimated) override {
             ViewController::viewWillAppear(isAnimated);
+            this->getRemoteState();
         }
 
         /**
@@ -79,6 +80,9 @@ class AuxOut: public shittygui::ViewController {
     private:
         void initEnableSection();
         void initMeasurementSelection();
+
+        void getRemoteState();
+        void updateRemoteState();
 
     private:
         /// Reference to the loadd RPC
