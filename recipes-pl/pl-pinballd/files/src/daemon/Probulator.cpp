@@ -356,6 +356,8 @@ void Probulator::parseAndReadSerialNumberPointer(struct cbor_item_t *array) {
  */
 void Probulator::registerDriver(const std::shared_ptr<DriverBase> &driver) {
     this->drivers.emplace_back(driver);
+
+    driver->driverDidRegister(this);
 }
 
 

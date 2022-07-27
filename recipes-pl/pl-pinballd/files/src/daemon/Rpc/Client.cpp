@@ -9,6 +9,7 @@
 #include <fmt/format.h>
 #include <plog/Log.h>
 
+#include "Utils/Cbor.h"
 #include "EventLoop.h"
 #include "RpcTypes.h"
 #include "Server.h"
@@ -254,27 +255,19 @@ void Client::dispatchPacket(const struct rpc_header &hdr, const struct cbor_item
  * @remark If a key is absent from the payload, its current value is _not_ changed.
  */
 void Client::updateBroadcastConfig(const struct cbor_item_t *item) {
-    auto entries = cbor_map_handle(item);
-    const auto numEntries = cbor_map_size(item);
-
-    for(size_t i = 0; i < numEntries; i++) {
-       auto &pair = entries[i];
- 
-        if(!cbor_isa_string(pair.key) || !cbor_string_is_definite(pair.key)) {
-            throw std::runtime_error("invalid key (expected definite string)");
+    if(auto touch = Util::CborMapGet(item, "touch")) {
+        if(cbor_float_ctrl_is_ctrl(touch)) {
+            this->wantsTouchEvents = cbor_get_bool(touch);
         }
-
-        const auto keyStr = reinterpret_cast<const char *>(cbor_string_handle(pair.key));
-        const auto keyStrLen = cbor_string_length(pair.key);
-
-        if(!strncmp("touch", keyStr, keyStrLen) && cbor_float_ctrl_is_ctrl(pair.value)) {
-            this->wantsTouchEvents = cbor_get_bool(pair.value);
+    }
+    if(auto button = Util::CborMapGet(item, "button")) {
+        if(cbor_float_ctrl_is_ctrl(button)) {
+            this->wantsButtonEvents = cbor_get_bool(button);
         }
-        else if(!strncmp("button", keyStr, keyStrLen) && cbor_float_ctrl_is_ctrl(pair.value)) {
-            this->wantsButtonEvents = cbor_get_bool(pair.value);
-        }
-        else if(!strncmp("encoder", keyStr, keyStrLen) && cbor_float_ctrl_is_ctrl(pair.value)) {
-            this->wantsEncoderEvents = cbor_get_bool(pair.value);
+    }
+    if(auto encoder = Util::CborMapGet(item, "encoder")) {
+        if(cbor_float_ctrl_is_ctrl(encoder)) {
+            this->wantsEncoderEvents = cbor_get_bool(encoder);
         }
     }
 

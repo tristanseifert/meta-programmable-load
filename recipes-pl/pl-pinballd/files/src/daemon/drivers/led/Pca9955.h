@@ -3,11 +3,14 @@
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
+#include <unordered_map>
 
 #include <uuid.h>
 
+#include "LedManager.h"
 #include "drivers/Driver.h"
 
 struct cbor_item_t;
@@ -104,6 +107,8 @@ class Pca9955: public DriverBase, public std::enable_shared_from_this<Pca9955> {
         Pca9955(const int busFd, const cbor_item_t *config);
         ~Pca9955();
 
+        void driverDidRegister(Probulator *) override;
+
         /**
          * @brief Set the global brightness
          *
@@ -118,6 +123,7 @@ class Pca9955: public DriverBase, public std::enable_shared_from_this<Pca9955> {
 
     private:
         void readConfig(const struct cbor_item_t *);
+        void readLedMap(const struct cbor_item_t *);
 
         /**
          * @brief Calculate the LED current for a given current setting
@@ -157,6 +163,9 @@ class Pca9955: public DriverBase, public std::enable_shared_from_this<Pca9955> {
         void writeRegister(const uint8_t reg, std::span<const uint8_t> data);
 
     private:
+        /// Output debug logs about the per channel current settings
+        constexpr static const bool kLogChannelCurrent{false};
+
         /// File descriptor for the I2C bus
         int busFd{-1};
 

@@ -27,8 +27,6 @@ class Client {
         void replyTo(const struct rpc_header &, std::span<const std::byte>);
         void send(std::span<const std::byte>);
 
-        void updateBroadcastConfig(const struct cbor_item_t *);
-
         /**
          * @brief Determine if the client wants to receive broadcasts of the given type
          *
@@ -59,7 +57,6 @@ class Client {
             this->send(packet);
         }
 
-
         /**
          * @brief Return the client's connection id
          *
@@ -74,6 +71,7 @@ class Client {
         void bevEvent(struct bufferevent *, const size_t);
 
         void dispatchPacket(const struct rpc_header &, const struct cbor_item_t *);
+        void updateBroadcastConfig(const struct cbor_item_t *);
 
     private:
         /// Underlying client file descriptor

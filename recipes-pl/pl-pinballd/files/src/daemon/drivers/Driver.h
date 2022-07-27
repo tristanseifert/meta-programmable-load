@@ -1,6 +1,8 @@
 #ifndef DRIVERS_DRIVER_H
 #define DRIVERS_DRIVER_H
 
+class Probulator;
+
 /**
  * @brief Base class for drivers
  *
@@ -9,7 +11,18 @@
  */
 class DriverBase {
     public:
+        virtual ~DriverBase() = default;
 
+        /**
+         * @brief The driver has just been registered
+         *
+         * Called right after the driver's registered to a probulator instance.
+         *
+         * @param probulator Instance the driver was registered to
+         */
+        virtual void driverDidRegister(Probulator *probulator) {
+            // default implementation: do nothing
+        }
 };
 
 #endif

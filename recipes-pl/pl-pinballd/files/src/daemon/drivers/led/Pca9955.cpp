@@ -124,12 +124,13 @@ void Pca9955::readConfig(const struct cbor_item_t *map) {
 
             const auto current = cbor_float_get_float(value);
             const auto iref = CalculateIref(current);
-            PLOG_VERBOSE << fmt::format("{} = {} mA = ${:02x}", i, current, iref);
+
+            if(kLogChannelCurrent) {
+                PLOG_VERBOSE << fmt::format("{} = {} mA = ${:02x}", i, current, iref);
+            }
 
             this->iref[i] = iref;
         }
-
-        PLOG_DEBUG << fmt::format("Read {} channels' current data", numEntries);
     }
     // no current array is specified, so use defaults
     else {
@@ -141,17 +142,98 @@ void Pca9955::readConfig(const struct cbor_item_t *map) {
     }
 
     // read the mapping from outputs -> LED type
-    auto mapArray = Util::CborMapGet(map, "map");
-    if(mapArray && cbor_isa_array(mapArray)) {
-        const auto numEntries = cbor_array_size(mapArray);
+    auto ledMap = Util::CborMapGet(map, "map");
+    if(ledMap && cbor_isa_map(ledMap)) {
+        const auto numEntries = cbor_map_size(ledMap);
         if(numEntries > kNumChannels) {
-            throw std::runtime_error(fmt::format("map array too large ({} entries)", numEntries));
+            throw std::runtime_error(fmt::format("map too large ({} entries)", numEntries));
         }
 
-        // TODO: implement
+        this->readLedMap(ledMap);
     } else {
-        throw std::runtime_error("missing or invalid map array");
+        throw std::runtime_error("missing or invalid map");
     }
+}
+
+/**
+ * @brief Parse the LED arrangement map
+ *
+ * This is a CBOR map, whose keys are unsigned integers corresponding to a value in the
+ * LedManager::Indicator enum. Each entry in the map corresponds to one of the following cases:
+ *
+ * - `null`: The indicator is not used. This is equivalent to not specifying the indicator at all.
+ * - uint: A single channel physical number (for a single color channel)
+ * - array: An array of uint channel numbers (up to 3) for a multi-color indicator
+ *
+ * @seeAlso LedManager::Indicator
+ */
+void Pca9955::readLedMap(const struct cbor_item_t *ledMap) {
+    std::bitset<kNumChannels> allocated;
+
+    auto keys = cbor_map_handle(ledMap);
+    const auto numKeys = cbor_map_size(ledMap);
+
+    for(size_t i = 0; i < numKeys; i++) {
+        auto &pair = keys[i];
+        const auto key = Util::CborReadUint(pair.key);
+
+        // ensure this is a valid key
+        if(!LedManager::IsValidIndicatorValue(key)) {
+            throw std::runtime_error(fmt::format("invalid LED map key (${:x})", key));
+        }
+
+        const auto indicatorId = static_cast<LedManager::Indicator>(key);
+
+        // decode the value
+        LedInfo info;
+
+        if(cbor_isa_uint(pair.value)) {
+            const auto idx = Util::CborReadUint(pair.value);
+            if(allocated[idx]) {
+                throw std::runtime_error(fmt::format("already allocated channel {}", idx));
+            }
+
+            info.indices.emplace_back(idx);
+            allocated[idx] = true;
+        } else if(cbor_isa_array(pair.value)) {
+            // iterate over all indices
+            const auto numChannels = cbor_array_size(pair.value);
+            if(numChannels > 3) {
+                throw std::runtime_error(fmt::format("too many channels specified ({}, max 3)",
+                            numChannels));
+            }
+
+            for(size_t j = 0; j < numChannels; j++) {
+                const auto idx = Util::CborReadUint(cbor_array_get(pair.value, j));
+
+                if(allocated[idx]) {
+                    throw std::runtime_error(fmt::format("already allocated channel {}", idx));
+                }
+
+                info.indices.emplace_back(idx);
+                allocated[idx] = true;
+            }
+        } else if(cbor_isa_float_ctrl(pair.value) && cbor_is_null(pair.value)) {
+            // ignore it as if it weren't here
+            continue;
+        } else {
+            throw std::runtime_error("invalid LED map value (expected uint, array, or null)");
+        }
+
+        // insert the info
+        this->channels.emplace(indicatorId, info);
+    }
+
+    PLOG_DEBUG << "Assigned channels: " << allocated;
+}
+
+
+
+/**
+ * @brief Register the driver with the LED manager
+ */
+void Pca9955::driverDidRegister(Probulator *probulator) {
+    probulator->getLedManager()->registerDriver(this->shared_from_this());
 }
 
 
