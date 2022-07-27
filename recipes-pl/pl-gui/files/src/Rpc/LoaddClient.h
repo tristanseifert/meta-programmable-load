@@ -10,7 +10,9 @@
 #include <unordered_map>
 #include <vector>
 
+namespace PlCommon {
 class EventLoop;
+}
 
 namespace Rpc {
 class LoaddClient {
@@ -27,7 +29,7 @@ class LoaddClient {
         using MeasurementCallback = std::function<void(const Measurement &)>;
 
     public:
-        LoaddClient(const std::shared_ptr<EventLoop> &ev,
+        LoaddClient(const std::shared_ptr<PlCommon::EventLoop> &ev,
                 const std::filesystem::path &rpcSocketPath);
         ~LoaddClient();
 
@@ -44,7 +46,7 @@ class LoaddClient {
 
     private:
         /// Event loop onto which our events are connected
-        std::weak_ptr<EventLoop> ev;
+        std::weak_ptr<PlCommon::EventLoop> ev;
 
         /// Path of the RPC socket
         std::filesystem::path socketPath;

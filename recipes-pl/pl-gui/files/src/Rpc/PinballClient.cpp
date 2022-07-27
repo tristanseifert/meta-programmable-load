@@ -15,12 +15,12 @@
 #include <event2/bufferevent.h>
 #include <fmt/format.h>
 #include <plog/Log.h>
+#include <load-common/EventLoop.h>
 #include <shittygui/Event.h>
 #include <shittygui/Screen.h>
 
 #include "Gui/Renderer.h"
 #include "Utils/Cbor.h"
-#include "EventLoop.h"
 #include "RpcTypes.h"
 #include "PinballClient.h"
 
@@ -39,7 +39,7 @@ enum rpc_endpoint {
 /**
  * @brief Create a pinball client instance
  */
-PinballClient::PinballClient(const std::shared_ptr<EventLoop> &ev,
+PinballClient::PinballClient(const std::shared_ptr<PlCommon::EventLoop> &ev,
         const std::filesystem::path &rpcSocketPath) : ev(ev), socketPath(rpcSocketPath) {
     int err;
     auto evbase = ev->getEvBase();

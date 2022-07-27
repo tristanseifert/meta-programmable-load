@@ -7,7 +7,10 @@
 #include <utility>
 #include <vector>
 
+namespace PlCommon {
 class EventLoop;
+}
+
 class Framebuffer;
 
 namespace shittygui {
@@ -26,7 +29,8 @@ class FontHandler;
  */
 class Renderer {
     public:
-        Renderer(const std::shared_ptr<EventLoop> &ev, const std::shared_ptr<Framebuffer> &fb);
+        Renderer(const std::shared_ptr<PlCommon::EventLoop> &ev,
+                const std::shared_ptr<Framebuffer> &fb);
         ~Renderer();
 
         void setRootViewController(const std::shared_ptr<shittygui::ViewController> &newRoot);
@@ -40,7 +44,7 @@ class Renderer {
 
     private:
         /// Main event loop
-        std::weak_ptr<EventLoop> ev;
+        std::weak_ptr<PlCommon::EventLoop> ev;
         /// Framebuffer to render to
         std::shared_ptr<Framebuffer> fb;
 

@@ -4,8 +4,8 @@
 
 #include <fmt/format.h>
 #include <plog/Log.h>
+#include <load-common/EventLoop.h>
 
-#include "EventLoop.h"
 #include "Framebuffer.h"
 #include "Renderer.h"
 
@@ -16,8 +16,8 @@ using namespace Gui;
 /**
  * @brief Initialize GUI library
  */
-Renderer::Renderer(const std::shared_ptr<EventLoop> &ev, const std::shared_ptr<Framebuffer> &fb) :
-    ev(ev), fb(fb) {
+Renderer::Renderer(const std::shared_ptr<PlCommon::EventLoop> &ev,
+        const std::shared_ptr<Framebuffer> &fb) : ev(ev), fb(fb) {
     // set up the screen
     const auto &size = this->fb->getSize();
     this->screen = std::make_shared<shittygui::Screen>(shittygui::Screen::PixelFormat::RGB24,

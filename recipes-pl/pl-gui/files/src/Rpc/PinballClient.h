@@ -10,7 +10,9 @@
 #include <variant>
 #include <vector>
 
+namespace PlCommon {
 class EventLoop;
+}
 
 namespace Gui {
 class Renderer;
@@ -65,7 +67,7 @@ class PinballClient {
         using IndicatorChange = std::pair<Indicator, IndicatorValue>;
 
     public:
-        PinballClient(const std::shared_ptr<EventLoop> &ev,
+        PinballClient(const std::shared_ptr<PlCommon::EventLoop> &ev,
                 const std::filesystem::path &socketPath);
         ~PinballClient();
 
@@ -137,7 +139,7 @@ class PinballClient {
         uint8_t nextTag{0};
 
         /// The event loop that owns us
-        std::weak_ptr<EventLoop> ev;
+        std::weak_ptr<PlCommon::EventLoop> ev;
         /// GUI renderer process to receive events
         std::weak_ptr<Gui::Renderer> gui;
 

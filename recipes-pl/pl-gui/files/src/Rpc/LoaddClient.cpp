@@ -14,9 +14,9 @@
 #include <event2/bufferevent.h>
 #include <fmt/format.h>
 #include <plog/Log.h>
+#include <load-common/EventLoop.h>
 
 #include "Utils/Cbor.h"
-#include "EventLoop.h"
 #include "LoaddClient.h"
 #include "RpcTypes.h"
 
@@ -36,7 +36,7 @@ enum rpc_endpoint {
  * @param ev Event loop to install events on
  * @param rpcSocketPath Path to the UNIX domain socket loadd is listening on
  */
-LoaddClient::LoaddClient(const std::shared_ptr<EventLoop> &ev,
+LoaddClient::LoaddClient(const std::shared_ptr<PlCommon::EventLoop> &ev,
         const std::filesystem::path &rpcSocketPath) : ev(ev), socketPath(rpcSocketPath) {
     int err;
     auto evbase = ev->getEvBase();

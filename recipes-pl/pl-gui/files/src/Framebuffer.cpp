@@ -18,8 +18,8 @@
 
 #include <fmt/format.h>
 #include <plog/Log.h>
+#include <load-common/EventLoop.h>
 
-#include "EventLoop.h"
 #include "Framebuffer.h"
 
 struct type_name {
@@ -54,7 +54,7 @@ const std::unordered_map<uint32_t, std::string_view> Framebuffer::gConnectorName
  * @param ev Event loop to attach event handlers to
  * @param path Filesystem path to the DRI device to open
  */
-Framebuffer::Framebuffer(const std::shared_ptr<EventLoop> &ev, const std::string_view path) :
+Framebuffer::Framebuffer(const std::shared_ptr<PlCommon::EventLoop> &ev, const std::string_view path) :
         ev(ev) {
     // open the card
     this->driFd = open(path.data(), O_RDWR);

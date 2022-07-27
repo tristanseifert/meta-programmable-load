@@ -6,8 +6,7 @@
 
 #include <fmt/format.h>
 #include <plog/Log.h>
-
-#include "EventLoop.h"
+#include <load-common/EventLoop.h>
 
 #include "HomeScreen.h"
 
@@ -64,7 +63,7 @@ HomeScreen::HomeScreen(const std::shared_ptr<Rpc::LoaddClient> &loaddRpc) : load
  * @brief Initialize an event to drive the clock
  */
 void HomeScreen::initClockTimer() {
-    auto evbase = EventLoop::Current()->getEvBase();
+    auto evbase = PlCommon::EventLoop::Current()->getEvBase();
     this->clockTimerEvent = event_new(evbase, -1, EV_PERSIST, [](auto, auto, auto ctx) {
         reinterpret_cast<HomeScreen *>(ctx)->updateClock();
     }, this);

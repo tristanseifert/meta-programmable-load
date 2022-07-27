@@ -58,6 +58,7 @@ include_directories(${PKG_LIBKMS_INCLUDE_DIRS})
 #add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/shittygui EXCLUDE_FROM_ALL)
 
+find_package(load-common REQUIRED)
 find_package(fmt REQUIRED)
 find_package(plog REQUIRED)
 
@@ -83,9 +84,7 @@ add_compile_options(-Wcast-qual)
 add_executable(gui
     ${VERSION_FILE}
     src/main.cpp
-    src/EventLoop.cpp
     src/Framebuffer.cpp
-    src/Watchdog.cpp
     src/Rpc/PinballClient.cpp
     src/Rpc/LoaddClient.cpp
     src/Gui/IconManager.cpp
@@ -99,7 +98,7 @@ set_target_properties(gui PROPERTIES OUTPUT_NAME load-gui)
 target_include_directories(gui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
 target_include_directories(gui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(gui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include/gui)
-target_link_libraries(gui PRIVATE confd plog::plog fmt::fmt)
+target_link_libraries(gui PRIVATE confd plog::plog fmt::fmt load-common::load-common)
 #    tomlplusplus::tomlplusplus)
 
 target_include_directories(gui PRIVATE ${PKG_LIBEVENT_INCLUDE_DIRS} ${PKG_LIBCBOR_INCLUDE_DIRS})

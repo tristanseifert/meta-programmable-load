@@ -12,7 +12,9 @@
 #include <string>
 #include <string_view>
 
+namespace PlCommon {
 class EventLoop;
+}
 
 /**
  * @brief DRM framebuffer driver
@@ -32,7 +34,7 @@ class Framebuffer {
          */
         using SwapCallback = std::function<void(size_t fbIndex)>;
 
-        Framebuffer(const std::shared_ptr<EventLoop> &ev, const std::string_view path);
+        Framebuffer(const std::shared_ptr<PlCommon::EventLoop> &ev, const std::string_view path);
         ~Framebuffer();
 
         /**
@@ -187,7 +189,7 @@ class Framebuffer {
         int ttyFd{-1};
 
         /// Main event loop
-        std::weak_ptr<EventLoop> ev;
+        std::weak_ptr<PlCommon::EventLoop> ev;
         /// Event for handling drm messages
         struct event *drmEvent{nullptr};
 

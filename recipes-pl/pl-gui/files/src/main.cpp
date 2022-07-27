@@ -1,5 +1,4 @@
 #include <getopt.h>
-#include <event2/event.h>
 
 #include <atomic>
 #include <cstdlib>
@@ -7,16 +6,11 @@
 #include <memory>
 #include <iostream>
 
-#include <plog/Log.h>
-#include <plog/Appenders/ColorConsoleAppender.h>
-#include <plog/Appenders/ConsoleAppender.h>
-#include <plog/Formatters/FuncMessageFormatter.h>
-#include <plog/Formatters/TxtFormatter.h>
-#include <plog/Init.h>
+#include <load-common/EventLoop.h>
+#include <load-common/Watchdog.h>
+#include <load-common/Logging.h>
 
-#include "EventLoop.h"
 #include "Framebuffer.h"
-#include "Watchdog.h"
 #include "version.h"
 #include "Gui/IconManager.h"
 #include "Gui/Renderer.h"
@@ -28,79 +22,19 @@
 std::atomic_bool gRun{true};
 
 /**
- * @brief Initialize logging
- *
- * Sets up the plog logging framework. We redirect all log output to stderr, under the assumption
- * that we'll be running under some sort of supervisor that handles capturing and storing
- * these messages.
- *
- * @param level Minimum log level to output
- * @param simple Whether the simple message output format (no timestamps) is used
- */
-static void InitLog(const plog::Severity level, const bool simple) {
-    // figure out if the console is a tty
-    const bool isTty = (isatty(fileno(stdout)) == 1);
-
-    // set up the logger
-    if(simple) {
-        if(isTty) {
-            static plog::ColorConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
-            plog::init(level, &ttyAppender);
-        } else {
-            static plog::ConsoleAppender<plog::FuncMessageFormatter> ttyAppender;
-            plog::init(level, &ttyAppender);
-        }
-    } else {
-        if(isTty) {
-            static plog::ColorConsoleAppender<plog::TxtFormatter> ttyAppender;
-            plog::init(level, &ttyAppender);
-        } else {
-            static plog::ConsoleAppender<plog::TxtFormatter> ttyAppender;
-            plog::init(level, &ttyAppender);
-        }
-    }
-    PLOG_INFO << "Starting load-gui " << kVersion << " (" << kVersionGitHash << ")";
-}
-
-/**
- * @brief Initialize libevent
- *
- * Configure the log callback for libevent to use our existing logging machinery.
- */
-static void InitLibevent() {
-    event_set_log_callback([](const auto severity, const auto msg) {
-        switch(severity) {
-            case EVENT_LOG_DEBUG:
-                PLOG_DEBUG << msg;
-                break;
-            case EVENT_LOG_MSG:
-                PLOG_INFO << msg;
-                break;
-            case EVENT_LOG_WARN:
-                PLOG_WARNING << msg;
-                break;
-            default:
-                PLOG_ERROR << msg;
-                break;
-        }
-    });
-}
-
-/**
  * @brief Entry point
  *
  * This ensures the drm framebuffer's set up, then jumps into our GUI main loop, and handles
  * cleaning up the drm stuff when we're done with all that.
  */
 int main(const int argc, char * const * argv) {
-    std::shared_ptr<EventLoop> ev;
+    std::shared_ptr<PlCommon::EventLoop> ev;
     std::shared_ptr<Rpc::LoaddClient> rpc;
     std::shared_ptr<Rpc::PinballClient> pinballRpc;
 
     std::shared_ptr<Framebuffer> fb;
     std::shared_ptr<Gui::Renderer> gui;
-
-    plog::Severity logLevel{plog::Severity::info};
+    int logLevel;
     bool logSimple{false};
 
     // base path for icons
@@ -128,7 +62,7 @@ int main(const int argc, char * const * argv) {
             {nullptr,                   0, 0, 0},
         };
 
-        c = getopt_long(argc, argv, "", options, &index);
+        c = getopt_long_only(argc, argv, "", options, &index);
 
         // end of options
         if(c == -1) {
@@ -136,36 +70,9 @@ int main(const int argc, char * const * argv) {
         }
         // long option (based on index)
         else if(!c) {
-            // log verbosity (centered around warning level)
             if(index == 0) {
-                const auto level = strtol(optarg, nullptr, 10);
-
-                switch(level) {
-                    case -3:
-                        logLevel = plog::Severity::fatal;
-                        break;
-                    case -2:
-                        logLevel = plog::Severity::error;
-                        break;
-                    case -1:
-                        logLevel = plog::Severity::warning;
-                        break;
-                    case 0:
-                        logLevel = plog::Severity::info;
-                        break;
-                    case 1:
-                        logLevel = plog::Severity::debug;
-                        break;
-                    case 2:
-                        logLevel = plog::Severity::verbose;
-                        break;
-
-                    default:
-                        std::cerr << "invalid log level: must be [-3, 2]" << std::endl;
-                        return -1;
-                }
+                logLevel = strtol(optarg, nullptr, 10);
             }
-            // use simple log format
             else if(index == 1) {
                 logSimple = true;
             }
@@ -185,12 +92,12 @@ int main(const int argc, char * const * argv) {
     }
 
     // initialization
-    InitLog(logLevel, logSimple);
-    InitLibevent();
+    PlCommon::InitLogging(logLevel, logSimple);
+    PLOG_INFO << "Starting load-gui " << kVersion << " (" << kVersionGitHash << ")";
 
-    Watchdog::Init();
+    PlCommon::Watchdog::Init();
 
-    ev = std::make_shared<EventLoop>();
+    ev = std::make_shared<PlCommon::EventLoop>(true);
     ev->arm();
 
     // set up RPC to loadd
@@ -232,6 +139,7 @@ int main(const int argc, char * const * argv) {
 
     // run event loop
     PLOG_DEBUG << "entering main loop";
+    PlCommon::Watchdog::Start();
 
     try {
         while(gRun) {
@@ -240,6 +148,8 @@ int main(const int argc, char * const * argv) {
     } catch(const std::exception &e) {
         PLOG_FATAL << "exception in main loop: " << e.what();
     }
+
+    PlCommon::Watchdog::Stop();
 
     // clean up GUI
     pinballRpc->disableUiEvents();
