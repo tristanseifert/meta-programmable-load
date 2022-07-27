@@ -11,6 +11,8 @@
 #include "Types.h"
 
 class EventLoop;
+class Probulator;
+class LedManager;
 
 namespace Rpc {
 /**
@@ -53,6 +55,8 @@ class Server: public std::enable_shared_from_this<Server> {
         void broadcastRaw(const BroadcastType type, const uint8_t endpoint,
                 std::span<const std::byte> payload);
 
+        void setProbulator(const std::shared_ptr<Probulator> &probulator);
+
     private:
 
 
@@ -76,6 +80,9 @@ class Server: public std::enable_shared_from_this<Server> {
 
         /// connected clients
         std::unordered_map<int, std::shared_ptr<Client>> clients;
+
+        /// LED manager (for controlling indicators)
+        std::weak_ptr<LedManager> ledManager;
 };
 }
 

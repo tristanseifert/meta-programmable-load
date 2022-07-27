@@ -22,6 +22,7 @@
 #include "Utils/Base32.h"
 #include "Utils/Cbor.h"
 
+#include "LedManager.h"
 #include "Probulator.h"
 #include "drivers/DriverList.h"
 
@@ -73,14 +74,21 @@ Probulator::Probulator(const std::filesystem::path &i2cPath) {
         this->idpromHeader = header;
         break;
     }
+
+    // initialize stuff
+    this->led = std::make_shared<LedManager>();
 }
 
 /**
  * @brief Close all allocated resources
  */
 Probulator::~Probulator() {
+    this->led.reset();
+
+    // shut down drivers
     this->drivers.clear();
 
+    // close hardware resources
     close(this->busFd);
 }
 

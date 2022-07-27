@@ -7,11 +7,14 @@
 #include <cstring>
 #include <stdexcept>
 #include <system_error>
+#include <utility>
 
 #include <cbor.h>
 #include <fmt/format.h>
 #include <plog/Log.h>
 
+#include "LedManager.h"
+#include "Probulator.h"
 #include "Utils/Cbor.h"
 #include "Pca9955.h"
 
@@ -286,4 +289,79 @@ void Pca9955::writeRegister(const uint8_t start, std::span<const uint8_t> data) 
     if(err < 0) {
         throw std::system_error(errno, std::generic_category(), "write register");
     }
+}
+
+
+
+/**
+ * @brief Set the brightness of an indicator, by its id
+ *
+ * All channels corresponding to this indicator will be set to the same brightness. Prefer the
+ * setIndicatorColor function for multichannel indicators.
+ *
+ * @seeAlso setIndicatorColor
+ */
+bool Pca9955::setIndicatorBrightness(const LedManager::Indicator which, const double brightness) {
+    using namespace std::placeholders;
+
+    const double temp = std::clamp(brightness, 0., 1.);
+    PLOG_INFO << fmt::format("set led {} to {}", (size_t) which, temp);
+
+    // ensure we have this channel
+    if(!this->channels.contains(which)) {
+        return false;
+    }
+    const auto &info = this->channels.at(which);
+
+    // set each channel's brightness
+    std::for_each(info.indices.begin(), info.indices.end(),
+            std::bind(std::mem_fn(&Pca9955::setBrightness), this, _1, brightness));
+
+    return true;
+}
+
+/**
+ * @brief Set the color of a multicolor indicator
+ *
+ * Any color components beyond what we have are ignored.
+ */
+bool Pca9955::setIndicatorColor(const LedManager::Indicator which, const LedManager::Color &color) {
+    const auto [cR, cG, cB] = color;
+    PLOG_INFO << fmt::format("set led {} to ({}, {}, {})", (size_t) which, cR, cG, cB);
+
+    // ensure we have this channel
+    if(!this->channels.contains(which)) {
+        return false;
+    }
+    const auto &info = this->channels.at(which);
+
+    switch(info.indices.size()) {
+        case 3:
+            this->setBrightness(info.indices[2], cB);
+            [[fallthrough]];
+        case 2:
+            this->setBrightness(info.indices[1], cG);
+            [[fallthrough]];
+        case 1:
+            this->setBrightness(info.indices[0], cR);
+            break;
+
+        default:
+            throw std::runtime_error(fmt::format("invalid channel info (has {} indices)",
+                        info.indices.size()));
+    }
+
+    return true;
+}
+
+/**
+ * @brief Set the global brightness
+ *
+ * This sets the group duty cycle register.
+ */
+void Pca9955::setIndicatorGlobalBrightness(const double brightness) {
+    const double temp = std::clamp(brightness, 0., 1.);
+    const uint8_t duty = static_cast<double>(0xff) * temp;
+
+    this->writeRegister(Register::GroupDutyCycle, duty);
 }

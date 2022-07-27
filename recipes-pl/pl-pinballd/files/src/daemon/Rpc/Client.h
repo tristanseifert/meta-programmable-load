@@ -72,6 +72,7 @@ class Client {
 
         void dispatchPacket(const struct rpc_header &, const struct cbor_item_t *);
         void updateBroadcastConfig(const struct cbor_item_t *);
+        void updateIndicators(const struct cbor_item_t *);
 
     private:
         /// Underlying client file descriptor

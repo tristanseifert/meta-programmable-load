@@ -15,6 +15,7 @@
 #include <plog/Log.h>
 
 #include "EventLoop.h"
+#include "Probulator.h"
 #include "RpcTypes.h"
 #include "Client.h"
 #include "Server.h"
@@ -32,7 +33,7 @@ void Server::initSocket(const std::filesystem::path &path) {
     int err;
 
     // create the socket
-    err = socket(AF_UNIX, SOCK_STREAM, 0);
+    err = socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if(err == -1) {
         throw std::system_error(errno, std::generic_category(), "create rpc socket");
     }
@@ -122,6 +123,15 @@ Server::~Server() {
     // close all clients
     PLOG_DEBUG << "Closing client connections";
     this->clients.clear();
+}
+
+
+
+/**
+ * @brief Set probulator instance to affect
+ */
+void Server::setProbulator(const std::shared_ptr<Probulator> &probulator) {
+    this->ledManager = probulator->getLedManager();
 }
 
 

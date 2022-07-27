@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 
 class DriverBase;
+class LedManager;
 
 /**
  * @brief Front panel hardware prober
@@ -142,6 +143,13 @@ class Probulator {
             return this->busFd;
         }
 
+        /**
+         * @brief Get the LED manager instance
+         */
+        constexpr inline auto &getLedManager() const {
+            return this->led;
+        }
+
     private:
         void parseIdpromPayload(std::span<const std::byte> payload);
         void parseAndReadSerialNumberPointer(struct cbor_item_t *);
@@ -174,6 +182,9 @@ class Probulator {
 
         /// All registered and initialized drivers
         std::vector<std::shared_ptr<DriverBase>> drivers;
+
+        /// LED interface
+        std::shared_ptr<LedManager> led;
 };
 
 #endif

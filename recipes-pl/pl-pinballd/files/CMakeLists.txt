@@ -70,6 +70,7 @@ add_executable(daemon
     src/daemon/Probulator.cpp
     src/daemon/Watchdog.cpp
     src/daemon/EventLoop.cpp
+    src/daemon/LedManager.cpp
     src/daemon/Rpc/Server.cpp
     src/daemon/Rpc/Client.cpp
     src/daemon/drivers/gpio/Pca9535.cpp

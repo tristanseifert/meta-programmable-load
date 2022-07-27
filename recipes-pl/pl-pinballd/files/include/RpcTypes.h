@@ -76,6 +76,8 @@ enum rpc_endpoint {
     kRpcEndpointBroadcastConfig         = 0x01,
     /// User interface event broadcast
     kRpcEndpointUiEvent                 = 0x02,
+    /// Indicator state update
+    kRpcEndpointIndicator               = 0x03,
 };
 
 #endif

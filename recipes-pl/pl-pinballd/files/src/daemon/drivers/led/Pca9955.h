@@ -21,7 +21,8 @@ namespace drivers::led {
  *
  * This is a driver for the PCA9955B 16-channel constant current LED driver.
  */
-class Pca9955: public DriverBase, public std::enable_shared_from_this<Pca9955> {
+class Pca9955: public DriverBase, public LedManager::DriverInterface,
+    public std::enable_shared_from_this<Pca9955> {
     private:
         /// Device register addresses
         enum Register: uint8_t {
@@ -121,6 +122,18 @@ class Pca9955: public DriverBase, public std::enable_shared_from_this<Pca9955> {
 
         void setBrightness(const size_t channel, const double brightness);
 
+    public:
+        bool setIndicatorBrightness(const LedManager::Indicator which,
+                const double brightness) override;
+        bool setIndicatorColor(const LedManager::Indicator which,
+                const LedManager::Color &color) override;
+
+        /// Global brightness support is implemented.
+        bool supportsIndicatorGlobalBrightness() const override {
+            return true;
+        }
+        void setIndicatorGlobalBrightness(const double brightness) override;
+
     private:
         void readConfig(const struct cbor_item_t *);
         void readLedMap(const struct cbor_item_t *);
@@ -166,6 +179,17 @@ class Pca9955: public DriverBase, public std::enable_shared_from_this<Pca9955> {
         /// Output debug logs about the per channel current settings
         constexpr static const bool kLogChannelCurrent{false};
 
+        /**
+         * @brief Information to drive an indicator
+         *
+         * This struct holds the indices of all the underlying output channels for a given
+         * indicator.
+         */
+        struct LedInfo {
+            /// Indices for the
+            std::vector<size_t> indices;
+        };
+
         /// File descriptor for the I2C bus
         int busFd{-1};
 
@@ -180,6 +204,9 @@ class Pca9955: public DriverBase, public std::enable_shared_from_this<Pca9955> {
          * Contains the value for the IREFx register for the given channel
          */
         std::array<uint8_t, kNumChannels> iref;
+
+        /// Mapping from indicator id -> LED info
+        std::unordered_map<LedManager::Indicator, LedInfo> channels;
 };
 }
 

@@ -16,6 +16,7 @@
 #include <plog/Formatters/TxtFormatter.h>
 #include <plog/Init.h>
 
+#include "Rpc/Server.h"
 #include "EventLoop.h"
 #include "Probulator.h"
 #include "Watchdog.h"
@@ -204,6 +205,8 @@ int main(const int argc, char * const * argv) {
         probe = std::make_shared<Probulator>(frontI2cBus);
 
         probe->probe();
+
+        ev->getRpcServer()->setProbulator(probe);
     } catch(const std::exception &e) {
         PLOG_ERROR << "Failed to probe hardware: " << e.what();
         return 1;

@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cstring>
+#include <string_view>
 #include <system_error>
+#include <unordered_map>
 
 #include <cbor.h>
 #include <event2/event.h>
@@ -10,6 +12,7 @@
 #include <plog/Log.h>
 
 #include "Utils/Cbor.h"
+#include "LedManager.h"
 #include "EventLoop.h"
 #include "RpcTypes.h"
 #include "Server.h"
@@ -232,6 +235,10 @@ void Client::dispatchPacket(const struct rpc_header &hdr, const struct cbor_item
         case kRpcEndpointBroadcastConfig:
             this->updateBroadcastConfig(payload);
             break;
+        // set the state of an indicator
+        case kRpcEndpointIndicator:
+            this->updateIndicators(payload);
+            break;
         // ignore nops
         case kRpcEndpointNoOp:
             break;
@@ -274,4 +281,80 @@ void Client::updateBroadcastConfig(const struct cbor_item_t *item) {
     PLOG_VERBOSE << "client " << this->socket << " enabled broadcasts: " <<
         (this->wantsTouchEvents ? "touch " : "") << (this->wantsButtonEvents ? "button " : "")
         << (this->wantsEncoderEvents ? "encoder " : "");
+}
+
+/**
+ * @brief Set the state of front panel indicators
+ *
+ * The payload is a CBOR map, which consists of string keys corresponding to the names of the
+ * indicators. Each key's value can be either a boolean (to set the indicator fully on/off,) a
+ * floating point value (to set the brightness) or an array (to set the color of a multicolor
+ * indicator.)
+ */
+void Client::updateIndicators(const struct cbor_item_t *item) {
+    using Indicator = LedManager::Indicator;
+
+    auto led = this->server.lock()->ledManager.lock();
+
+    // Mapping from key names to their associated indicator IDs
+    static const std::unordered_map<std::string_view, Indicator> kIndicators{{
+        {"status",      Indicator::Status},
+        {"trigger",     Indicator::Trigger},
+        {"overheat",    Indicator::Overheat},
+        {"overcurrent", Indicator::Overcurrent},
+        {"error",       Indicator::Error},
+        {"modeCc",      Indicator::BtnModeCc},
+        {"modeCv",      Indicator::BtnModeCv},
+        {"modeCw",      Indicator::BtnModeCw},
+        {"modeExt",     Indicator::BtnModeExt},
+        {"loadOn",      Indicator::BtnLoadOn},
+        {"menu",        Indicator::BtnMenu},
+    }};
+
+    for(const auto &[key, indicator] : kIndicators) {
+        // retrieve the associated key
+        auto value = Util::CborMapGet(item, key);
+        if(!value) {
+            continue;
+        }
+
+        // apply it appropriately
+        if(cbor_isa_float_ctrl(value)) {
+            double brightness{0.};
+
+            if(cbor_float_get_width(value) == CBOR_FLOAT_0 && cbor_is_bool(value)) {
+                brightness = cbor_get_bool(value) ? 1. : 0.;
+            }
+            else if(cbor_is_float(value)) {
+                brightness = std::clamp(cbor_float_get_float(value), 0., 1.);
+            } else {
+                throw std::runtime_error("unsupported float-type value");
+            }
+
+            led->setBrightness(indicator, brightness);
+        } else if(cbor_isa_array(value)) {
+            LedManager::Color color{};
+            const auto numEntries = cbor_array_size(value);
+
+            switch(numEntries) {
+                case 3:
+                    std::get<2>(color) = cbor_float_get_float(cbor_array_get(value, 2));
+                    [[fallthrough]];
+                case 2:
+                    std::get<1>(color) = cbor_float_get_float(cbor_array_get(value, 1));
+                    [[fallthrough]];
+                case 1:
+                    std::get<0>(color) = cbor_float_get_float(cbor_array_get(value, 0));
+                    break;
+
+                default:
+                    throw std::runtime_error(fmt::format("invalid color ({} entries)", numEntries));
+            }
+
+            led->setColor(indicator, color);
+        } else {
+            throw std::runtime_error(fmt::format("invalid value for key '{}', "
+                        "expected bool, float, or array", key));
+        }
+    }
 }
