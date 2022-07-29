@@ -89,6 +89,7 @@ add_executable(gui
     src/Rpc/LoaddClient.cpp
     src/Gui/IconManager.cpp
     src/Gui/Renderer.cpp
+    src/Gui/VersionScreen.cpp
     src/Gui/HomeScreen.cpp
     src/Gui/Setup/AuxOut.cpp
 )

@@ -14,7 +14,7 @@
 #include "version.h"
 #include "Gui/IconManager.h"
 #include "Gui/Renderer.h"
-#include "Gui/HomeScreen.h"
+#include "Gui/VersionScreen.h"
 #include "Rpc/PinballClient.h"
 #include "Rpc/LoaddClient.h"
 
@@ -128,8 +128,8 @@ int main(const int argc, char * const * argv) {
         gui = std::make_shared<Gui::Renderer>(ev, fb);
         Gui::IconManager::SetBasePath(iconBasePath);
 
-        auto home = std::make_shared<Gui::HomeScreen>(rpc);
-        gui->setRootViewController(home);
+        auto vers = std::make_shared<Gui::VersionScreen>(rpc);
+        gui->setRootViewController(vers);
 
         pinballRpc->enableUiEvents(gui);
     } catch(const std::exception &e) {
