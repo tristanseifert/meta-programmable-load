@@ -17,10 +17,6 @@ class Label;
 }
 }
 
-namespace Rpc {
-class LoaddClient;
-}
-
 namespace Gui {
 /**
  * @brief Version Screen
@@ -29,7 +25,7 @@ namespace Gui {
  */
 class VersionScreen: public shittygui::ViewController {
     public:
-        VersionScreen(const std::shared_ptr<Rpc::LoaddClient> &rpc);
+        VersionScreen();
         ~VersionScreen();
 
         /**
@@ -80,8 +76,6 @@ class VersionScreen: public shittygui::ViewController {
         constexpr static const double kVersionFontSize{24.};
 
     private:
-        /// Reference to the loadd RPC
-        std::weak_ptr<Rpc::LoaddClient> loaddRpc;
         /// Timer event
         struct event *timerEvent{nullptr};
         /// Number of times the timer has fired

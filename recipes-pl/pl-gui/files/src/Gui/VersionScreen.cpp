@@ -13,6 +13,7 @@
 #include "Gui/IconManager.h"
 #include "Gui/Style.h"
 #include "Rpc/PinballClient.h"
+#include "SharedState.h"
 #include "version.h"
 
 #include <shittygui/Screen.h>
@@ -24,7 +25,7 @@ using namespace Gui;
 /**
  * @brief Initialize the home screen
  */
-VersionScreen::VersionScreen(const std::shared_ptr<Rpc::LoaddClient> &loaddRpc) : loaddRpc(loaddRpc) {
+VersionScreen::VersionScreen() {
     // create the container
     auto cont = shittygui::MakeWidget<shittygui::widgets::Container>({0, 0}, {800, 480});
     cont->setDrawsBorder(false);
@@ -178,7 +179,7 @@ bool VersionScreen::runLedTest(const size_t step) {
     }};
 
     // set the appropriate indicator state
-    // SharedState::gRpcPinball->setIndicatorState(gIndicatorStates.at(step));
+    SharedState::gRpcPinball->setIndicatorState(gIndicatorStates.at(step));
 
     return step == (gIndicatorStates.size() - 1);
 }

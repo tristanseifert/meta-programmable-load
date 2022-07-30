@@ -10,8 +10,9 @@
 #include <load-common/Watchdog.h>
 #include <load-common/Logging.h>
 
-#include "Framebuffer.h"
 #include "version.h"
+#include "SharedState.h"
+#include "Gui/Framebuffer.h"
 #include "Gui/IconManager.h"
 #include "Gui/Renderer.h"
 #include "Gui/VersionScreen.h"
@@ -29,7 +30,6 @@ std::atomic_bool gRun{true};
  */
 int main(const int argc, char * const * argv) {
     std::shared_ptr<PlCommon::EventLoop> ev;
-    std::shared_ptr<Rpc::LoaddClient> rpc;
     std::shared_ptr<Rpc::PinballClient> pinballRpc;
 
     std::shared_ptr<Framebuffer> fb;
@@ -104,8 +104,8 @@ int main(const int argc, char * const * argv) {
     PLOG_DEBUG << "initializing rpc";
 
     try {
-        rpc = std::make_shared<Rpc::LoaddClient>(ev, loaddSocketPath);
-        pinballRpc = std::make_shared<Rpc::PinballClient>(ev, pinballdSocketPath);
+        SharedState::gRpcLoadd = std::make_shared<Rpc::LoaddClient>(ev, loaddSocketPath);
+        SharedState::gRpcPinball = std::make_shared<Rpc::PinballClient>(ev, pinballdSocketPath);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up loadd rpc: " << e.what();
         return 1;
@@ -128,10 +128,10 @@ int main(const int argc, char * const * argv) {
         gui = std::make_shared<Gui::Renderer>(ev, fb);
         Gui::IconManager::SetBasePath(iconBasePath);
 
-        auto vers = std::make_shared<Gui::VersionScreen>(rpc);
+        auto vers = std::make_shared<Gui::VersionScreen>();
         gui->setRootViewController(vers);
 
-        pinballRpc->enableUiEvents(gui);
+        SharedState::gRpcPinball->enableUiEvents(gui);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up gui: " << e.what();
         return 1;
@@ -152,7 +152,7 @@ int main(const int argc, char * const * argv) {
     PlCommon::Watchdog::Stop();
 
     // clean up GUI
-    pinballRpc->disableUiEvents();
+    SharedState::gRpcPinball->disableUiEvents();
 
     gui.reset();
 
@@ -161,8 +161,8 @@ int main(const int argc, char * const * argv) {
     fb.reset();
 
     // clean up everything else
-    rpc.reset();
-    pinballRpc.reset();
+    SharedState::gRpcLoadd.reset();
+    SharedState::gRpcPinball.reset();
 
     ev.reset();
 }

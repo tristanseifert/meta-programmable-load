@@ -14,6 +14,7 @@
 #include "Gui/IconManager.h"
 #include "Gui/Style.h"
 #include "Rpc/LoaddClient.h"
+#include "SharedState.h"
 
 #include <shittygui/Screen.h>
 #include <shittygui/Widgets/Button.h>
@@ -26,7 +27,7 @@ using namespace Gui;
 /**
  * @brief Initialize the home screen
  */
-HomeScreen::HomeScreen(const std::shared_ptr<Rpc::LoaddClient> &loaddRpc) : loaddRpc(loaddRpc) {
+HomeScreen::HomeScreen() {
     // create the container
     auto cont = shittygui::MakeWidget<shittygui::widgets::Container>({0, 0}, {800, 480});
     cont->setDrawsBorder(false);
@@ -186,7 +187,7 @@ void HomeScreen::initActionsBox(const std::shared_ptr<shittygui::widgets::Contai
             shittygui::widgets::Button::Type::Push, "Aux Out Config");
     auxOutSetup->setFont(kActionFont, kActionFontSize);
     auxOutSetup->setPushCallback([this](auto whomst) {
-        auto auxCfg = std::make_shared<Setup::AuxOut>(this->loaddRpc);
+        auto auxCfg = std::make_shared<Setup::AuxOut>();
         this->presentViewController(auxCfg, true);
     });
 
@@ -342,17 +343,11 @@ void HomeScreen::updateClock() {
  * This updates our measurement labels and the thermal state icons.
  */
 void HomeScreen::installMeasurementCallback() {
-    auto rpc = this->loaddRpc.lock();
-    if(!rpc) {
-        PLOG_WARNING << "LoaddClient is nullptr!";
-        return;
-    }
-
     if(this->measurementCallbackToken) {
         this->removeMeasurementCallback();
     }
 
-    this->measurementCallbackToken = rpc->addMeasurementCallback([&](const auto &data) {
+    this->measurementCallbackToken = SharedState::gRpcLoadd->addMeasurementCallback([&](const auto &data) {
         this->actualCurrentLabel->setContent(fmt::format("<span font_features='tnum'>{:.3f}</span>", data.current), true);
         this->actualVoltageLabel->setContent(fmt::format("<span font_features='tnum'>{:.2f}</span>", data.voltage), true);
         this->actualTempLabel->setContent(fmt::format("<span font_features='tnum'>{:.1f}</span>", data.temperature), true);
@@ -363,18 +358,10 @@ void HomeScreen::installMeasurementCallback() {
  * @brief Remove an existing measurement callback
  */
 void HomeScreen::removeMeasurementCallback() {
-    auto rpc = this->loaddRpc.lock();
-    if(!rpc) {
-        // this implies the clalback was removed as well
-        PLOG_WARNING << "LoaddClient is nullptr!";
-        this->measurementCallbackToken = 0;
-        return;
-    }
-
     if(!this->measurementCallbackToken) {
         return;
     }
 
-    rpc->removeMeasurementCallback(this->measurementCallbackToken);
+    SharedState::gRpcLoadd->removeMeasurementCallback(this->measurementCallbackToken);
     this->measurementCallbackToken = 0;
 }

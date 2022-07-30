@@ -17,10 +17,6 @@ class Label;
 }
 }
 
-namespace Rpc {
-class LoaddClient;
-}
-
 namespace Gui {
 /**
  * @brief Programmable load home screen
@@ -30,7 +26,7 @@ namespace Gui {
  */
 class HomeScreen: public shittygui::ViewController {
     public:
-        HomeScreen(const std::shared_ptr<Rpc::LoaddClient> &rpc);
+        HomeScreen();
         ~HomeScreen();
 
         /**
@@ -121,8 +117,6 @@ class HomeScreen: public shittygui::ViewController {
         constexpr static const shittygui::Color kClockTextColor{0.94, 0.94, 0.94};
 
     private:
-        /// Reference to the loadd RPC
-        std::weak_ptr<Rpc::LoaddClient> loaddRpc;
         /// Measurement update callback token
         uint32_t measurementCallbackToken{0};
 

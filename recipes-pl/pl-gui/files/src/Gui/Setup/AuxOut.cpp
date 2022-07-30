@@ -17,7 +17,7 @@ using namespace Gui::Setup;
 /**
  * @brief Initialize the auxiliary output configuration
  */
-AuxOut::AuxOut(const std::weak_ptr<Rpc::LoaddClient> &rpc) : loaddRpc(rpc) {
+AuxOut::AuxOut() {
     // create the container
     auto cont = shittygui::MakeWidget<shittygui::widgets::Container>({0, 0}, {800, 480});
     cont->setDrawsBorder(false);

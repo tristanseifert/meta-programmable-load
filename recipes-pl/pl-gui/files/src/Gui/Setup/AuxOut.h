@@ -16,10 +16,6 @@ class Container;
 }
 }
 
-namespace Rpc {
-class LoaddClient;
-}
-
 namespace Gui::Setup {
 /**
  * @brief Auxiliary analog output configuration
@@ -45,7 +41,7 @@ class AuxOut: public shittygui::ViewController {
         };
 
     public:
-        AuxOut(const std::weak_ptr<Rpc::LoaddClient> &rpc);
+        AuxOut();
         ~AuxOut() = default;
 
         /**
@@ -85,9 +81,6 @@ class AuxOut: public shittygui::ViewController {
         void updateRemoteState();
 
     private:
-        /// Reference to the loadd RPC
-        std::weak_ptr<Rpc::LoaddClient> loaddRpc;
-
         /// Root widget for the screen
         std::shared_ptr<shittygui::Widget> root;
 

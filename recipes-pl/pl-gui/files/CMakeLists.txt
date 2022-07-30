@@ -84,9 +84,10 @@ add_compile_options(-Wcast-qual)
 add_executable(gui
     ${VERSION_FILE}
     src/main.cpp
-    src/Framebuffer.cpp
+    src/SharedState.cpp
     src/Rpc/PinballClient.cpp
     src/Rpc/LoaddClient.cpp
+    src/Gui/Framebuffer.cpp
     src/Gui/IconManager.cpp
     src/Gui/Renderer.cpp
     src/Gui/VersionScreen.cpp
