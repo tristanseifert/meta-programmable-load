@@ -8,6 +8,8 @@
 #endif
 
 #include <array>
+#include <cerrno>
+#include <cstring>
 #include <system_error>
 
 #include <fmt/format.h>
@@ -15,7 +17,7 @@
 
 #include "Pca9535.h"
 
-using namespace Drivers::Gpio;
+using namespace drivers::gpio;
 
 /**
  * @brief Initialize the IO expander
@@ -100,3 +102,43 @@ void Pca9535::writeReg(const Register reg, const uint8_t value) {
     }
 }
 
+/**
+ * @brief Read an 8-bit register
+ *
+ * @TODO implement a version for reading 16-bit register data
+ */
+uint8_t Pca9535::readReg(const Register reg) {
+    if(kLogRegRead) {
+        PLOG_DEBUG << fmt::format("<< rd {:02x}", static_cast<uint8_t>(reg));
+    }
+
+    // buffers for the address and receive data respectively
+    std::array<uint8_t, 1> addrBuffer{{static_cast<uint8_t>(reg)}};
+    std::array<uint8_t, 1> readBuffer;
+
+    // prepare the read messages
+    std::array<struct i2c_msg, 2> msgs;
+    for(auto &msg : msgs) {
+        memset(&msg, 0, sizeof(msg));
+        msg.addr = this->busAddress;
+    }
+
+    msgs[0].len = addrBuffer.size();
+    msgs[0].buf = addrBuffer.data();
+
+    msgs[1].flags = I2C_M_RD;
+    msgs[1].len = readBuffer.size();
+    msgs[1].buf = readBuffer.data();
+
+    struct i2c_rdwr_ioctl_data txns;
+    txns.msgs = msgs.data();
+    txns.nmsgs = msgs.size();
+
+    int err = ioctl(this->bus, I2C_RDWR, &txns);
+    if(err < 0) {
+        throw std::system_error(errno, std::generic_category(), "read register");
+    }
+
+    // return the read data
+    return *readBuffer.begin();
+}

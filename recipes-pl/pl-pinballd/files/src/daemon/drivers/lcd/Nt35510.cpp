@@ -20,7 +20,7 @@
 #include "drivers/gpio/GpioChip.h"
 #include "Nt35510.h"
 
-using namespace Drivers::Lcd;
+using namespace drivers::lcd;
 
 const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
     {{
@@ -469,7 +469,7 @@ const std::array<Nt35510::PanelData, Nt35510::kNumPanels> Nt35510::gPanelData{
  * controller to enable its output.
  */
 Nt35510::Nt35510(const std::filesystem::path &spidevPath,
-        const std::shared_ptr<Drivers::Gpio::GpioChip> &gpioChip, const size_t gpioLine) :
+        const std::shared_ptr<drivers::gpio::GpioChip> &gpioChip, const size_t gpioLine) :
     devPath(spidevPath), gpioChip(gpioChip), gpioLine(gpioLine) {
     int err;
 
@@ -503,7 +503,7 @@ Nt35510::Nt35510(const std::filesystem::path &spidevPath,
     }
 
     // configure the reset line and assert it
-    using PinMode = Drivers::Gpio::GpioChip;
+    using PinMode = drivers::gpio::GpioChip;
     this->gpioChip->configurePin(this->gpioLine, PinMode::OutputPushPull);
 
     this->toggleReset();

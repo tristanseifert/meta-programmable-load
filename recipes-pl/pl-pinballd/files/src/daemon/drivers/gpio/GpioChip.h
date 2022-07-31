@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace Drivers::Gpio {
+namespace drivers::gpio {
 /**
  * @brief Base class for GPIO sources
  *

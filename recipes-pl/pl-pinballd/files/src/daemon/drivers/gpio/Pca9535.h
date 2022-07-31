@@ -8,7 +8,7 @@
 
 #include "GpioChip.h"
 
-namespace Drivers::Gpio {
+namespace drivers::gpio {
 /**
  * @brief NXP PCA9535 16-bit I²C GPIO expander
  *
@@ -22,7 +22,12 @@ class Pca9535: public GpioChip {
 
         void configurePin(const size_t pin, const PinMode mode) override;
         void setPinState(const size_t pin, bool asserted) override;
-        uint32_t getPinState() override { return 0; };
+        uint32_t getPinState() override {
+            uint32_t temp{0};
+            temp = this->readReg(Register::Input0);
+            temp |= static_cast<uint32_t>(this->readReg(Register::Input1)) << 8;
+            return temp;
+        }
 
     private:
         /// Are register reads dumped to the terminal?

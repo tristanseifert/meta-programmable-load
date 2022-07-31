@@ -73,6 +73,7 @@ add_executable(daemon
     src/daemon/LedManager.cpp
     src/daemon/Rpc/Server.cpp
     src/daemon/Rpc/Client.cpp
+    src/daemon/drivers/button/Direct.cpp
     src/daemon/drivers/gpio/Pca9535.cpp
     src/daemon/drivers/lcd/Nt35510.cpp
     src/daemon/drivers/led/Pca9955.cpp

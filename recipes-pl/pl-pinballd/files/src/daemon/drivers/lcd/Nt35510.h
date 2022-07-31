@@ -12,11 +12,9 @@
 #include <string>
 #include <vector>
 
-namespace Drivers::Gpio {
-class GpioChip;
-}
+#include "drivers/gpio/GpioChip.h"
 
-namespace Drivers::Lcd {
+namespace drivers::lcd {
 /**
  * @brief NT35510-based TFT LCD driver
  *
@@ -30,7 +28,7 @@ namespace Drivers::Lcd {
 class Nt35510 {
     public:
         Nt35510(const std::filesystem::path &spidev,
-                const std::shared_ptr<Drivers::Gpio::GpioChip> &gpioChip, const size_t gpioLine);
+                const std::shared_ptr<drivers::gpio::GpioChip> &gpioChip, const size_t gpioLine);
         ~Nt35510();
 
     private:
@@ -93,10 +91,10 @@ class Nt35510 {
         struct gpiod_line *devCs{nullptr};
 
         /// Frequency to use for SPI device accesses (Hz)
-        uint32_t busSpeed{7'500'000};
+        uint32_t busSpeed{8'500'000};
 
         /// GPIO chip the reset line is connected to
-        std::shared_ptr<Drivers::Gpio::GpioChip> gpioChip;
+        std::shared_ptr<drivers::gpio::GpioChip> gpioChip;
         /// GPIO line the reset signal is connected to
         size_t gpioLine;
 };

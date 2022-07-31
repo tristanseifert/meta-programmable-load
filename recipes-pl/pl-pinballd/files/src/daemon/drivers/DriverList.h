@@ -11,6 +11,7 @@
 
 #include "drivers/touch/Ft6336.h"
 
+#include "drivers/button/Direct.h"
 #include "drivers/gpio/Pca9535.h"
 #include "drivers/lcd/Nt35510.h"
 #include "drivers/led/Pca9955.h"
@@ -18,7 +19,7 @@
 class Probulator;
 
 /// XXX: this is the IO expander used on the rev 3 front panel
-static std::shared_ptr<Drivers::Gpio::Pca9535> gFrontIoExpander;
+static std::shared_ptr<drivers::gpio::Pca9535> gFrontIoExpander;
 
 /**
  * @brief Driver information structure
@@ -70,16 +71,24 @@ static const std::array<DriverInfo, 3> gSupportedDrivers{{
      *
      * This is only for compatibility with rev3 hardware. On rev4 hardware, the display is
      * controlled through the embedded controller.
+     *
+     * Additionally, this sets up a small wrapper around the IO expander that polls the state of
+     * the buttons connected directly to it. The mapping of inputs is fixed, again for
+     * compatibility with rev3 hardware.
      */
     {
         .id = uuids::uuid{{0x08, 0x81, 0xBD, 0xAD, 0x2F, 0xD4, 0x45, 0xB0, 0x84, 0x36, 0x36, 0xDB, 0x75, 0x36, 0xA1, 0x9E}},
         .name = "NT35510 Display Controller",
         .constructor = [](auto probulator, auto id, auto args) {
             if(!gFrontIoExpander) {
-                gFrontIoExpander = std::make_shared<Drivers::Gpio::Pca9535>(probulator->getBusFd(), 0x20);
+                gFrontIoExpander = std::make_shared<drivers::gpio::Pca9535>(probulator->getBusFd(), 0x20);
             }
 
-            Drivers::Lcd::Nt35510("/dev/spidev0.1", gFrontIoExpander, 8);
+            drivers::lcd::Nt35510("/dev/spidev0.1", gFrontIoExpander, 8);
+
+            // set up also the direct button io
+            auto btn = std::make_shared<drivers::button::Direct>(gFrontIoExpander);
+            probulator->registerDriver(btn);
         }
     },
 
@@ -95,7 +104,7 @@ static const std::array<DriverInfo, 3> gSupportedDrivers{{
         .constructor = [](auto probulator, auto id, auto args) {
             // XXX: only necessary for rev 3 hardware
             // set LED_OE = 0
-            gFrontIoExpander->configurePin(7, Drivers::Gpio::Pca9535::PinMode::Output);
+            gFrontIoExpander->configurePin(7, drivers::gpio::Pca9535::PinMode::Output);
             gFrontIoExpander->setPinState(7, false);
 
             // create the driver
