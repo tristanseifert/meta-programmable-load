@@ -3,22 +3,26 @@
  *
  * @brief RPC type definitions
  */
-#ifndef PLCOMMON_RPCTYPES_H
-#define PLCOMMON_RPCTYPES_H
+#ifndef PLCOMMON_RPC_TYPES_H
+#define PLCOMMON_RPC_TYPES_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
-#define kRpcVersionLatest 0x0100
+namespace PlCommon::Rpc {
+/**
+ * @brief Current RPC version
+ */
+constexpr static const uint16_t kRpcVersionLatest{0x0100};
 
 /**
  * @brief RPC header flags
  *
  * This enum defines allowable values for the `rpc_header.flags` member.
  *
- * @seealso struct rpc_header
+ * @seealso struct RpcHeader
  */
-enum rpc_flags {
+enum RpcFlags {
     kRpcFlagReply                       = (1 << 0),
     kRpcFlagBroadcast                   = (1 << 1),
 };
@@ -33,7 +37,7 @@ enum rpc_flags {
  * @remark The same packet header is used when sending messages to the remote endpoint on the M4
  *         but it uses the same byte ordering.
  */
-struct rpc_header {
+struct RpcHeader {
     /// protocol version: use kRpcVersionLatest
     uint16_t version;
     /// total length of message, in bytes (including this header)
@@ -51,7 +55,7 @@ struct rpc_header {
     /**
      * @brief Flags bit field
      *
-     * @seeAlso enum rpc_flags
+     * @seeAlso enum RpcFlags
      */
     uint8_t flags;
 
@@ -61,5 +65,7 @@ struct rpc_header {
     /// optional message payload (dependant upon endpoint)
     uint8_t payload[];
 } __attribute__((packed));
+
+}
 
 #endif

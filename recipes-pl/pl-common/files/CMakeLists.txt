@@ -42,6 +42,7 @@ add_library(${PROJECT_NAME} STATIC
     src/EventLoop.cpp
     src/Watchdog.cpp
     src/Logging.cpp
+    src/Rpc/ClientBase.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE src ${CMAKE_CURRENT_LIST_DIR}/include/)
