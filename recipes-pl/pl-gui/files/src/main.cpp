@@ -1,5 +1,6 @@
 #include <getopt.h>
 
+#include <array>
 #include <atomic>
 #include <cstdlib>
 #include <filesystem>
@@ -21,6 +22,28 @@
 
 /// Whether the UI task shall continue running
 std::atomic_bool gRun{true};
+
+/**
+ * @brief Disable all indicators
+ */
+static void DisableIndicators() {
+    using Indicator = Rpc::PinballClient::Indicator;
+
+    static const std::array<const Rpc::PinballClient::IndicatorChange, 11> gChanges{{
+        { Indicator::BtnModeCc, false },
+        { Indicator::BtnModeCv, false },
+        { Indicator::BtnModeCw, false },
+        { Indicator::BtnModeExt, false },
+        { Indicator::BtnLoadOn, false },
+        { Indicator::BtnMenu, false },
+        { Indicator::Trigger, false },
+        { Indicator::Overheat, false },
+        { Indicator::Overcurrent, false },
+        { Indicator::Error, false },
+        { Indicator::Status, false },
+    }};
+    SharedState::gRpcPinball->setIndicatorState(gChanges);
+}
 
 /**
  * @brief Entry point
@@ -153,6 +176,7 @@ int main(const int argc, char * const * argv) {
 
     // clean up GUI
     SharedState::gRpcPinball->disableUiEvents();
+    DisableIndicators();
 
     gui.reset();
 

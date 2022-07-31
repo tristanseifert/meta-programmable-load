@@ -124,15 +124,12 @@ bool VersionScreen::runLedTest(const size_t step) {
     using Color = Rpc::PinballClient::IndicatorColor;
 
     static const std::array<const std::vector<const Rpc::PinballClient::IndicatorChange>, 5> gIndicatorStates{{
-        // stage 0: test buttons
         {
-            // turn off all indicators
             { Indicator::Trigger, false },
             { Indicator::Overheat, false },
             { Indicator::Overcurrent, false },
             { Indicator::Error, false },
 
-            // illuminate the buttons
             { Indicator::BtnModeCc, true },
             { Indicator::BtnModeCv, true },
             { Indicator::BtnModeCw, true },
@@ -140,10 +137,8 @@ bool VersionScreen::runLedTest(const size_t step) {
             { Indicator::BtnLoadOn, Color{1., 0., 0.} },
             { Indicator::BtnMenu, true },
 
-            // status indicator
             { Indicator::Status, Color{1., 0., 0.} },
         },
-        // stage 1: indicators
         {
             { Indicator::BtnModeCc, false },
             { Indicator::BtnModeCv, false },
@@ -158,7 +153,6 @@ bool VersionScreen::runLedTest(const size_t step) {
             { Indicator::Overcurrent, true },
             { Indicator::Error, true },
         },
-        // stage 2: more indicators
         {
             { Indicator::BtnLoadOn, false },
 
@@ -168,13 +162,13 @@ bool VersionScreen::runLedTest(const size_t step) {
             { Indicator::Overcurrent, false },
             { Indicator::Error, false },
         },
-        // stage 3: even more indicators
         {
             { Indicator::Status, false },
             { Indicator::Trigger, false },
         },
         // stage 4: lmao
         {
+            { Indicator::Status, Color{.2, .2, .2} },
         },
     }};
 
