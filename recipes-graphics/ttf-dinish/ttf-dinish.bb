@@ -12,10 +12,10 @@ inherit allarch fontcache
 INHIBIT_DEFAULT_DEPS = "1"
 
 # font source is on github
-SRCBRANCH ?= "master"
-PV = "v2.013"
+SRCBRANCH ?= "main"
+PV = "v3.002"
 
-SRCREV_base = "8dcce6be1c51046203a9e32e0a525960e27be1e6"
+SRCREV_base = "62d0f29ba1ee9a7da11018ff16a4252669e39c97"
 
 SRC_URI = "git://github.com/playbeing/dinish.git;protocol=https;branch=${SRCBRANCH};name=base"
 # SRC_URI[sha256sum] = "d369db6e6e0ed5a669beec1790ba34c241d4c6db605d1594441c4a45ed3b404a"
