@@ -127,8 +127,8 @@ int main(const int argc, char * const * argv) {
     PLOG_DEBUG << "initializing rpc";
 
     try {
-        SharedState::gRpcLoadd = std::make_shared<Rpc::LoaddClient>(ev, loaddSocketPath);
-        SharedState::gRpcPinball = std::make_shared<Rpc::PinballClient>(ev, pinballdSocketPath);
+        SharedState::gRpcLoadd = std::make_shared<Rpc::LoaddClient>(loaddSocketPath);
+        SharedState::gRpcPinball = std::make_shared<Rpc::PinballClient>(pinballdSocketPath);
     } catch(const std::exception &e) {
         PLOG_FATAL << "failed to set up loadd rpc: " << e.what();
         return 1;

@@ -8,11 +8,8 @@
 #include <tuple>
 #include <utility>
 #include <variant>
-#include <vector>
 
-namespace PlCommon {
-class EventLoop;
-}
+#include <load-common/Rpc/ClientBase.h>
 
 namespace Gui {
 class Renderer;
@@ -34,7 +31,7 @@ enum PinballBroadcastType: uintptr_t {
 /**
  * @brief Interface to pinballd (user interface hardware io deamon)
  */
-class PinballClient {
+class PinballClient: public PlCommon::Rpc::ClientBase {
     public:
         /// Available indicators on the front panel
         enum class Indicator {
@@ -67,9 +64,7 @@ class PinballClient {
         using IndicatorChange = std::pair<Indicator, IndicatorValue>;
 
     public:
-        PinballClient(const std::shared_ptr<PlCommon::EventLoop> &ev,
-                const std::filesystem::path &socketPath);
-        ~PinballClient();
+        PinballClient(const std::filesystem::path &path) : ClientBase(path) {};
 
         /**
          * @brief Enable the secretion of UI events
@@ -102,16 +97,12 @@ class PinballClient {
         }
         void setIndicatorState(std::span<const IndicatorChange> changes);
 
+    protected:
+        void handleIncomingMessage(const PlCommon::Rpc::RpcHeader &header,
+                const struct cbor_item_t *message) override final;
+
     private:
-        int connectSocket();
-
-        void bevRead(struct bufferevent *);
-        void bevEvent(struct bufferevent *, const uintptr_t);
-
-        void sendRaw(std::span<const std::byte> payload);
-        uint8_t sendPacket(const uint8_t endpoint, std::span<const std::byte> payload);
-
-        void processUiEvent(std::span<const std::byte>);
+        void processUiEvent(const struct cbor_item_t *);
         void processUiTouchEvent(const struct cbor_item_t *);
 
         /// Emit a touch up event
@@ -135,26 +126,11 @@ class PinballClient {
             PinballBroadcastType::TouchEvent | PinballBroadcastType::ButtonEvent |
                 PinballBroadcastType::EncoderEvent
         };
-        /// Value for the next outgoing packet tag
-        uint8_t nextTag{0};
 
-        /// The event loop that owns us
-        std::weak_ptr<PlCommon::EventLoop> ev;
         /// GUI renderer process to receive events
         std::weak_ptr<Gui::Renderer> gui;
-
         /// Position of the last touch event
         std::pair<int16_t, int16_t> lastTouchPos{0, 0};
-
-        /// Path of the RPC socket
-        std::filesystem::path socketPath;
-        /// File descriptor for the RPC socket
-        int fd{-1};
-        /// Buffer event wrapping the loadd socket
-        struct bufferevent *bev{nullptr};
-
-        /// Packet receive buffer
-        std::vector<std::byte> rxBuf;
 };
 }
 

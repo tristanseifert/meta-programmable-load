@@ -8,14 +8,11 @@
 #include <memory>
 #include <span>
 #include <unordered_map>
-#include <vector>
 
-namespace PlCommon {
-class EventLoop;
-}
+#include <load-common/Rpc/ClientBase.h>
 
 namespace Rpc {
-class LoaddClient {
+class LoaddClient: public PlCommon::Rpc::ClientBase {
     public:
         /**
          * @brief Data point from a measurement message
@@ -29,35 +26,19 @@ class LoaddClient {
         using MeasurementCallback = std::function<void(const Measurement &)>;
 
     public:
-        LoaddClient(const std::shared_ptr<PlCommon::EventLoop> &ev,
-                const std::filesystem::path &rpcSocketPath);
-        ~LoaddClient();
+        LoaddClient(const std::filesystem::path &path) : ClientBase(path) {};
 
         uint32_t addMeasurementCallback(const MeasurementCallback &cb);
         bool removeMeasurementCallback(const uint32_t token);
 
-    private:
-        int connectToLoadd();
-
-        void handleLoaddRead(struct bufferevent *);
-        void handleLoaddEvent(struct bufferevent *, const uintptr_t);
-
-        void processMeasurement(std::span<const std::byte> payload);
+    protected:
+        void handleIncomingMessage(const PlCommon::Rpc::RpcHeader &header,
+                const struct cbor_item_t *message) override final;
 
     private:
-        /// Event loop onto which our events are connected
-        std::weak_ptr<PlCommon::EventLoop> ev;
+        void processMeasurement(const struct cbor_item_t *);
 
-        /// Path of the RPC socket
-        std::filesystem::path socketPath;
-        /// loadd remote socket
-        int fd{-1};
-        /// Buffer event wrapping the loadd socket
-        struct bufferevent *bev{nullptr};
-
-        /// Packet receive buffer
-        std::vector<std::byte> rxBuf;
-
+    private:
         /// Measurement callbacks (mapped by unique token)
         std::unordered_map<uint32_t, MeasurementCallback> measurementCallbacks;
         /// Next measurement callback token
