@@ -4,7 +4,8 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/ISC;md5=f3b90e
 PR = "r0"
 DEPENDS = "pl-confd libcbor systemd libevent libdrm libpng freetype fontconfig\
     cairo harfbuzz pango fmt plog pl-common"
-RDEPENDS:${PN} = "pl-app-meta pl-loadd libsystemd libdrm-kms"
+RDEPENDS:${PN} = "pl-app-meta pl-loadd libsystemd libdrm-kms ttf-dinish ttf-liberation-sans \
+    ttf-liberation-mono ttf-liberation-serif"
 
 # package is built using CMake
 SRC_URI = "\

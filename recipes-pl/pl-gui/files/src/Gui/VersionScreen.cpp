@@ -34,21 +34,21 @@ VersionScreen::VersionScreen() {
 
     // heading
     auto titleLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
-            shittygui::Point(5, (480 / 2) - ((kTitleFontSize * 1.35) / 2)),
-            shittygui::Size(790, kTitleFontSize * 1.35));
+            shittygui::Point(5, (480 / 2) - ((kTitleFontSize * 1.4) / 2)),
+            shittygui::Size(790, kTitleFontSize * 1.5));
     titleLabel->setFont(kTitleFont, kTitleFontSize);
     titleLabel->setTextColor({1, 1, 1});
-    titleLabel->setTextAlign(shittygui::TextAlign::Center);
+    titleLabel->setTextAlign(shittygui::TextAlign::Center, shittygui::VerticalAlign::Middle);
     titleLabel->setContent("Programmable Load");
     cont->addChild(titleLabel);
 
     // version label
     auto versionLabel = shittygui::MakeWidget<shittygui::widgets::Label>(
             shittygui::Point(5, 440),
-            shittygui::Size(790, kVersionFontSize * 1.35));
+            shittygui::Size(790, 40));
     versionLabel->setFont(kVersionFont, kVersionFontSize);
     versionLabel->setTextColor({1, 1, 1});
-    versionLabel->setTextAlign(shittygui::TextAlign::Center);
+    versionLabel->setTextAlign(shittygui::TextAlign::Center, shittygui::VerticalAlign::Top);
     versionLabel->setContent(fmt::format("Version {} ({})", kVersion, kVersionGitHash));
     cont->addChild(versionLabel);
 

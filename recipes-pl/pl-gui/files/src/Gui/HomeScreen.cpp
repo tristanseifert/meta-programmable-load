@@ -35,12 +35,12 @@ HomeScreen::HomeScreen() {
     cont->setBackgroundColor({0, 0, 0});
 
     // actual value section (top left)
-    auto actualCont = shittygui::MakeWidget<shittygui::widgets::Container>({10, 10}, {340, 350});
+    auto actualCont = shittygui::MakeWidget<shittygui::widgets::Container>({10, 10}, {340, 370});
     this->initActualValueBox(actualCont);
     cont->addChild(actualCont);
 
     // system configuration (under actual values)
-    auto confCont = shittygui::MakeWidget<shittygui::widgets::Container>({10, 370}, {340, 100});
+    auto confCont = shittygui::MakeWidget<shittygui::widgets::Container>({10, 385}, {340, 80});
     this->initConfigBox(confCont);
     cont->addChild(confCont);
 
@@ -87,7 +87,7 @@ void HomeScreen::initClockTimer() {
  */
 void HomeScreen::initActualValueBox(const std::shared_ptr<shittygui::widgets::Container> &box) {
     constexpr static const size_t kUnitWidth{69};
-    constexpr static const size_t kYSpacing{80};
+    constexpr static const size_t kYSpacing = kActualValueHeight;
 
     // set up the box
     box->setBackgroundColor(kActualBackgroundColor);
@@ -112,7 +112,8 @@ void HomeScreen::initActualValueBox(const std::shared_ptr<shittygui::widgets::Co
     this->actualWattageLabel->setContent("<span font_features='tnum'>0.00</span>", true);
 
     // inside temperature
-    this->actualTempLabel = MakeMeasureLabel(box, kActualTempColor, {5, 262}, "°C", kUnitWidth);
+    this->actualTempLabel = MakeMeasureLabel(box, kActualTempColor,
+            shittygui::Point(5, (kYSpacing * 3) + 2), "°C", kUnitWidth);
     this->actualTempLabel->setBackgroundColor({0, 0, 0, 1});
     this->actualTempLabel->setContent("<span font_features='tnum'>0.0</span>", true);
 }
@@ -277,22 +278,22 @@ std::shared_ptr<shittygui::widgets::Label> HomeScreen::MakeMeasureLabel(
     const auto valueWidth = width - unitWidth;
 
     auto value = shittygui::MakeWidget<shittygui::widgets::Label>(origin,
-            shittygui::Size(valueWidth, kActualValueFontSize * 1.2));
+            shittygui::Size(valueWidth, kActualValueHeight));
     value->setFont(kActualValueFont, kActualValueFontSize);
     value->setTextColor(color);
-    value->setTextAlign(shittygui::TextAlign::Right);
+    value->setTextAlign(shittygui::TextAlign::Right, shittygui::VerticalAlign::Top);
 
     container->addChild(value);
 
     // create the unit label
-    const auto unitYOffset = kActualValueFontSize - kActualUnitFontSize - 2;
+    constexpr static const int kUnitYOffset{32};
 
     auto unit = shittygui::MakeWidget<shittygui::widgets::Label>(
-            shittygui::Point(origin.x + valueWidth + kXSpacing, origin.y + unitYOffset),
-            shittygui::Size(unitWidth - kXSpacing, kActualUnitFontSize + 5));
+            shittygui::Point(origin.x + valueWidth + kXSpacing, origin.y + kUnitYOffset),
+            shittygui::Size(unitWidth - kXSpacing, kActualValueHeight - kUnitYOffset));
     unit->setFont(kActualUnitFont, kActualUnitFontSize);
     unit->setTextColor(color);
-    unit->setTextAlign(shittygui::TextAlign::Center);
+    unit->setTextAlign(shittygui::TextAlign::Center, shittygui::VerticalAlign::Bottom);
     unit->setContent(unitStr);
     unit->setEllipsizeMode(shittygui::EllipsizeMode::None);
 

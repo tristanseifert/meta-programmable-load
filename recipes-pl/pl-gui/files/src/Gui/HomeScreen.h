@@ -85,11 +85,13 @@ class HomeScreen: public shittygui::ViewController {
         /// Font for the actual current/voltage/wattage/etc
         constexpr static const std::string_view kActualValueFont{"DINish Bold"};
         /// Font size for the actual current/voltage/wattage values
-        constexpr static const double kActualValueFontSize{65.};
+        constexpr static const double kActualValueFontSize{64.};
+        /// Height of the actual value labels
+        constexpr static const double kActualValueHeight{90};
         /// Font for the actual value unit labels
         constexpr static const std::string_view kActualUnitFont{"DINish Condensed"};
         /// Font size for the actual unit labels
-        constexpr static const double kActualUnitFontSize{44.};
+        constexpr static const double kActualUnitFontSize{45.};
 
         /// Font color for the actual current
         constexpr static const shittygui::Color kActualCurrentColor{255./255., 153./255., 200./255.};
