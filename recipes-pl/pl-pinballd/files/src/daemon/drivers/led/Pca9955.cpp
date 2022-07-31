@@ -305,7 +305,10 @@ bool Pca9955::setIndicatorBrightness(const LedManager::Indicator which, const do
     using namespace std::placeholders;
 
     const double temp = std::clamp(brightness, 0., 1.);
-    PLOG_INFO << fmt::format("set led {} to {}", (size_t) which, temp);
+
+    if(kLogChanges) {
+        PLOG_INFO << fmt::format("set led {} to {}", static_cast<size_t>(which), temp);
+    }
 
     // ensure we have this channel
     if(!this->channels.contains(which)) {
@@ -327,7 +330,11 @@ bool Pca9955::setIndicatorBrightness(const LedManager::Indicator which, const do
  */
 bool Pca9955::setIndicatorColor(const LedManager::Indicator which, const LedManager::Color &color) {
     const auto [cR, cG, cB] = color;
-    PLOG_INFO << fmt::format("set led {} to ({}, {}, {})", (size_t) which, cR, cG, cB);
+
+    if(kLogChanges) {
+        PLOG_VERBOSE << fmt::format("set led {} to ({}, {}, {})", static_cast<size_t>(which), cR,
+                cG, cB);
+    }
 
     // ensure we have this channel
     if(!this->channels.contains(which)) {

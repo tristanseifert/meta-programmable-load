@@ -178,6 +178,8 @@ class Pca9955: public DriverBase, public LedManager::DriverInterface,
     private:
         /// Output debug logs about the per channel current settings
         constexpr static const bool kLogChannelCurrent{false};
+        /// Output debug logs about indicators being set
+        constexpr static const bool kLogChanges{false};
 
         /**
          * @brief Information to drive an indicator
