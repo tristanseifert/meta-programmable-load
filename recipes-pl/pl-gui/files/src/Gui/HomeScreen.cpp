@@ -286,7 +286,7 @@ std::shared_ptr<shittygui::widgets::Label> HomeScreen::MakeMeasureLabel(
     container->addChild(value);
 
     // create the unit label
-    constexpr static const int kUnitYOffset{32};
+    constexpr static const int kUnitYOffset{30};
 
     auto unit = shittygui::MakeWidget<shittygui::widgets::Label>(
             shittygui::Point(origin.x + valueWidth + kXSpacing, origin.y + kUnitYOffset),

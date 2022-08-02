@@ -89,9 +89,14 @@ void PinballClient::processUiEvent(const struct cbor_item_t *item) {
         case EventType::Touch:
             this->processUiTouchEvent(item);
             break;
+        case EventType::Button:
+            this->processUiButtonEvent(item);
+            break;
 
         // shouldn't get here
         default:
+            PLOG_WARNING << fmt::format("UI event type {} not yet implemented!",
+                    static_cast<size_t>(type));
             break;
     }
 }
@@ -164,9 +169,83 @@ void PinballClient::emitTouchEvent(const int16_t x, const int16_t y, const bool 
 
     gui->getScreen()->queueEvent(shittygui::event::Touch({x, y}, isDown));
 
-    if(kLogEvents) {
+    if(kLogTouchEvents) {
         PLOG_VERBOSE << fmt::format("Touch event ({}, {}) {}", x, y, isDown ? "down" : "up");
     }
+}
+
+/**
+ * @brief Process a button event
+ *
+ * This is a map with a `buttonData` key, which in turn contains a map of button names to their
+ * boolean states.
+ *
+ * @param root CBOR message payload
+ */
+void PinballClient::processUiButtonEvent(const struct cbor_item_t *root) {
+    auto buttonData = PlCommon::Util::CborMapGet(root, "buttonData");
+    if(!buttonData) {
+        throw std::runtime_error("invalid button event (missing buttonData payload)");
+    }
+
+    const auto numButtons = cbor_map_size(buttonData);
+    auto buttons = cbor_map_handle(buttonData);
+
+    for(size_t j = 0; j < numButtons; j++) {
+        auto &buttonPair = buttons[j];
+
+        if(!cbor_isa_string(buttonPair.key)) {
+            throw std::runtime_error("invalid button key");
+        } else if(!cbor_isa_float_ctrl(buttonPair.value) || !cbor_is_bool(buttonPair.value)) {
+            throw std::runtime_error("invalid button value (expected boolean)");
+        }
+
+        // get the button's state
+        const std::string_view buttonName{
+            reinterpret_cast<const char *>(cbor_string_handle(buttonPair.key)),
+                cbor_string_length(buttonPair.key)
+        };
+        const auto state = cbor_get_bool(buttonPair.value);
+
+        if(kLogButtonEvents) {
+            PLOG_VERBOSE << fmt::format("button {}={}", buttonName, state);
+        }
+
+        // handle events the GUI layer wants directly
+        if(buttonName == "menu" || buttonName == "select") {
+            this->emitButtonEventGui(buttonName, state);
+        } else {
+            // TODO: implement handling for this
+            PLOG_WARNING << fmt::format("unhandled btn event: {}={}", buttonName, state);
+        }
+    }
+}
+
+/**
+ * @brief Emit a button event into the GUI layer
+ *
+ * This codepath is used for the menu and select buttons, which are directly used for UI stuff.
+ */
+void PinballClient::emitButtonEventGui(const std::string_view &name, const bool state) {
+    auto gui = this->gui.lock();
+    if(!gui) {
+        PLOG_WARNING << "GUI went away, can't send button event!";
+        return;
+    }
+
+
+    using BtnType = shittygui::event::Button::Type;
+    BtnType type;
+
+    if(name == "menu") {
+        type = BtnType::Menu;
+    } else if(name == "select") {
+        type = BtnType::Select;
+    } else {
+        throw std::invalid_argument(fmt::format("invalid gui button '{}'", name));
+    }
+
+    gui->getScreen()->queueEvent(shittygui::event::Button(type, state));
 }
 
 

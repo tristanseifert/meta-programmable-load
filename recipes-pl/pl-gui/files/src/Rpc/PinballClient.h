@@ -104,6 +104,7 @@ class PinballClient: public PlCommon::Rpc::ClientBase {
     private:
         void processUiEvent(const struct cbor_item_t *);
         void processUiTouchEvent(const struct cbor_item_t *);
+        void processUiButtonEvent(const struct cbor_item_t *);
 
         /// Emit a touch up event
         inline void emitTouchUp() {
@@ -117,9 +118,13 @@ class PinballClient: public PlCommon::Rpc::ClientBase {
         }
         void emitTouchEvent(const int16_t x, const int16_t y, const bool isDown);
 
+        void emitButtonEventGui(const std::string_view &name, const bool state);
+
     private:
-        /// Should events be logged to the console?
-        constexpr static const bool kLogEvents{false};
+        /// Should touch events be logged to the console?
+        constexpr static const bool kLogTouchEvents{false};
+        /// Should button events be logged to the console?
+        constexpr static const bool kLogButtonEvents{false};
 
         /// Mask of all UI broadcast types we want
         constexpr static const PinballBroadcastType kUiBroadcastMask{
