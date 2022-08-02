@@ -75,6 +75,9 @@ class Client {
         void updateIndicators(const struct cbor_item_t *);
 
     private:
+        /// Log received packets
+        constexpr static const bool kLogReceived{false};
+
         /// Underlying client file descriptor
         int socket{-1};
         /// Socket buffer event (used for data ready to read + events)

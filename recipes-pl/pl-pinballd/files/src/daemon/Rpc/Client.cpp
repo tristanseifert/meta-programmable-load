@@ -227,8 +227,10 @@ void Client::send(std::span<const std::byte> buf) {
  * Determine what function handles a received packet, based on its endpoint field.
  */
 void Client::dispatchPacket(const struct rpc_header &hdr, const struct cbor_item_t *payload) {
-    PLOG_VERBOSE << fmt::format("client {} received packet to ep ${:02x} ({} bytes)",
-            this->socket, hdr.endpoint, hdr.length);
+    if(kLogReceived) {
+        PLOG_VERBOSE << fmt::format("client {} received packet to ep ${:02x} ({} bytes)",
+                this->socket, hdr.endpoint, hdr.length);
+    }
 
     switch(hdr.endpoint) {
         // update client config
