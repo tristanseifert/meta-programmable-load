@@ -33,7 +33,7 @@ void RpcServer::initSocket() {
     const auto path = Config::GetRpcSocketPath().c_str();
 
     // create the socket
-    err = socket(AF_UNIX, SOCK_STREAM, 0);
+    err = socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if(err == -1) {
         throw std::system_error(errno, std::generic_category(), "create rpc socket");
     }
