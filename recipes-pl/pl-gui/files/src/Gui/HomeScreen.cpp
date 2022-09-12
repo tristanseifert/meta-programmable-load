@@ -366,3 +366,23 @@ void HomeScreen::removeMeasurementCallback() {
     SharedState::gRpcLoadd->removeMeasurementCallback(this->measurementCallbackToken);
     this->measurementCallbackToken = 0;
 }
+
+
+
+/**
+ * @brief Process a button event
+ *
+ * In this case, we open the root menu when the menu button is pressed.
+ */
+bool HomeScreen::handleButtonEvent(const shittygui::event::Button &event) {
+    if(event.type != shittygui::event::Button::Type::Menu) {
+        return false;
+    }
+
+    // TODO: show the root menu
+    if(event.isDown) {
+        PLOG_WARNING << "TODO: show root menu here";
+    }
+
+    return true;
+}

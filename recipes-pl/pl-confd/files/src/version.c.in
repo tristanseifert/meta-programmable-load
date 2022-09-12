@@ -1,4 +1,0 @@
-#include "version.h"
-
-const char *kVersion = "@CMAKE_PROJECT_VERSION@";
-const char *kVersionGitHash = "@GIT_HASH@";

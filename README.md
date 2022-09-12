@@ -25,4 +25,4 @@ EXTRA_IMAGE_FEATURES = "debug-tweaks tools-debug"
 
 Note that the flag to enable a read-only rootfs (`read-only-rootfs`) is not specified, as this causes some configuration (namely Dropbear) to get overridden such that the host key is _not_ stored on the overlay in /etc, and instead a ramdisk.
 
-Typically, you will build the `core-image-base` image flavor.
+Typically, you will build the `programmable-load-core` image flavor.

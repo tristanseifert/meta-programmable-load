@@ -73,6 +73,13 @@ class AuxOut: public shittygui::ViewController {
             ViewController::viewDidDisappear();
         }
 
+        /**
+         * @brief Allow dismissing the view controller when pressing the menu button
+         */
+        bool shouldDismissOnMenuPress() override {
+            return true;
+        }
+
     private:
         void initEnableSection();
         void initMeasurementSelection();

@@ -59,6 +59,8 @@ class HomeScreen: public shittygui::ViewController {
             this->removeMeasurementCallback();
         }
 
+        bool handleButtonEvent(const shittygui::event::Button &event) override;
+
     private:
         void initClockTimer();
         void initActualValueBox(const std::shared_ptr<shittygui::widgets::Container> &);

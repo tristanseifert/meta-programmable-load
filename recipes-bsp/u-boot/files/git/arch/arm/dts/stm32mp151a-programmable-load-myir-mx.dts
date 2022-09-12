@@ -1326,6 +1326,7 @@
 
             // configuration ROM (read/write part of 24MAC402; behaves like regular EEPROM)
             eeprom-conf@50 {
+                status = "disabled";
                 compatible = "atmel,24c02";
                 pagesize = <16>;
 
@@ -1354,6 +1355,7 @@
 
             // ambient temp sensor
             ambient-temp@48 {
+                status = "disabled";
                 compatible = "atmel,at30ts74";
                 reg = <0x48>;
             };
@@ -1367,7 +1369,12 @@
 &spi3{
     /* specify chip selects: 0 = PA15, 1 = PC8 */
     num-cs = <2>;
-    cs-gpios = <&gpioa 15 GPIO_ACTIVE_LOW>, <&gpioc 8 GPIO_ACTIVE_LOW>;
+    //cs-gpios = <&gpioa 15 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+    //           <&gpioc 8 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+
+    // nonsense IO numbers (unused)
+    cs-gpios = <&gpioc 6 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+               <&gpioc 7 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 
     /* CAN controller */
     expansion-can@0 {
@@ -1376,7 +1383,8 @@
         spi-max-frequency = <10000000>;
 
         // CAN controller
-        compatible = "microchip,mcp2515";
+        compatible =  "trist,pl-front-panel";
+        //compatible = "microchip,mcp2515";
 
         // define the clock (16MHz) feeding the controller
         clocks = <&can_clk16m>;

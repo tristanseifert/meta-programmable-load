@@ -1,8 +1,14 @@
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+
 # install custom device trees
 SRC_URI += "\
-    file://git/arch/arm/boot/dts/stm32mp15xa.dtsi\
-    file://git/arch/arm/boot/dts/stm32mp15-m4-srm.dtsi\
     file://git/arch/arm/boot/dts/stm32mp151a-programmable-load-myir-mx.dts\
-    file://git/include/dt-bindings/pinctrl/stm32-pinfunc-2.h\
 "
 
+# driver changes
+SRC_URI += " \
+    file://0001-add-spidev-compatible.patch \
+    file://0002-add-custom-lcd-panel.patch \
+    file://stm32mp1.cfg \
+    file://programmable-load-rev3.cfg \
+"
