@@ -1,0 +1,22 @@
+# embedded controller arbiter
+[[access.allow]]
+user = "loadd"
+paths = [
+    "fw.*"
+]
+
+# USB and network remote control process
+[[access.allow]]
+user = "load-remote"
+paths = [
+    "remote.*"
+]
+
+# user interface process
+[[access.allow]]
+user = "load-ui"
+paths = [
+    "ui.*",
+    "remote.settings.*",
+    "auth.settings.*",
+]
