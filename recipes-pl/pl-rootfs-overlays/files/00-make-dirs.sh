@@ -6,6 +6,7 @@ set -e
 /bin/mkdir -p /persistent/appdata/ui
 /bin/mkdir -p /persistent/config
 /bin/mkdir -p /persistent/logs
+/bin/mkdir -p /persistent/logs/www
 /bin/mkdir -p /persistent/logs/system
 /bin/mkdir -p /persistent/overlay/.var-log-work
 
