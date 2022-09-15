@@ -1,0 +1,10 @@
+[Unit]
+Description=PHP-FPM
+After=network.target
+[Service]
+Type=forking
+PIDFile=/run/php-fpm.pid
+ExecStart=@SYSCONFDIR@/php/php-fpm-helper.sh start
+ExecStop=@SYSCONFDIR@/php/php-fpm-helper.sh stop
+[Install]
+WantedBy=multi-user.target

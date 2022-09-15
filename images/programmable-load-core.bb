@@ -11,6 +11,6 @@ CORE_IMAGE_EXTRA_INSTALL += "pl-app-meta pl-loadd pl-pinballd pl-gui "
 CORE_IMAGE_EXTRA_INSTALL += "pl-rootfs-overlays pl-confd-config "
 
 # servers
-CORE_IMAGE_EXTRA_INSTALL += "lighttpd "
+CORE_IMAGE_EXTRA_INSTALL += "pl-webui "
 
 inherit core-image
